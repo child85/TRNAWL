@@ -143,6 +143,11 @@ textarea:focus {
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
 
+.color-input {
+  height: 45px;
+  padding: 4px;
+}
+
 .auth-actions,
 .topbar-actions,
 .modal-actions,
@@ -322,18 +327,6 @@ textarea:focus {
   color: var(--muted);
 }
 
-.sync-status {
-  min-height: 32px;
-  display: inline-flex;
-  align-items: center;
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  padding: 0 12px;
-  color: var(--muted);
-  background: var(--surface);
-  font-size: 13px;
-}
-
 .view {
   display: none;
 }
@@ -394,6 +387,18 @@ textarea:focus {
   color: var(--navy);
   font-size: 18px;
   margin: 0 0 14px;
+}
+
+.panel-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.panel-heading h2 {
+  margin-bottom: 4px;
 }
 
 .table-wrap {

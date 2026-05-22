@@ -242,3 +242,14 @@ Changed:
 - Added an Admin danger zone to delete all tickets.
 - Cleared local calendar reservations when affected tickets are deleted.
 - Added Supabase delete policy migration for authenticated users.
+
+### Admin User Creation
+
+Removed the noisy Ready status and added a real Admin flow for creating selectable users.
+
+Changed:
+
+- Removed the visible top-bar sync status pill.
+- Added a Create User button to Admin.
+- Added a user creation dialog with name, role, manager, and color.
+- New users are saved to the people table and immediately appear in owner, lead, and calendar selections.

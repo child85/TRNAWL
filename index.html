@@ -64,7 +64,6 @@
             <p id="viewSubtitle">Operational health, blockers, and work needing attention.</p>
           </div>
           <div class="topbar-actions">
-            <span id="syncStatus" class="sync-status">Ready</span>
             <button id="refreshButton" class="icon-button" type="button" title="Refresh"><i data-lucide="refresh-cw"></i></button>
             <button id="newTicketButton" class="primary-button" type="button"><i data-lucide="plus"></i><span>Ticket</span></button>
             <button id="signOutButton" class="secondary-button" type="button">Sign out</button>
@@ -220,6 +219,28 @@
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
           <button class="primary-button" type="submit">Create Customer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="personDialog" class="modal">
+      <form id="personForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Create User</h2>
+            <p>Add a selectable team member for ticket ownership, lead defaults, and calendar planning.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label>Name<input id="personName" required placeholder="Marvin Martian" /></label>
+          <label>Role<input id="personRole" required placeholder="Delivery Engineer" /></label>
+          <label>Manager<select id="personManager"></select></label>
+          <label>Color<input id="personColor" class="color-input" type="color" value="#0067b1" /></label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Create User</button>
         </div>
       </form>
     </dialog>

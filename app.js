@@ -294,6 +294,18 @@ const developmentLog = [
     ],
     notes: ["Bulk delete is intentionally guarded by a typed confirmation prompt."],
   },
+  {
+    date: "2026-05-22",
+    title: "Admin user creation",
+    summary: "Removed the noisy Ready status and added a real Admin flow for creating selectable users.",
+    changes: [
+      "Removed the visible top-bar sync status pill.",
+      "Added a Create User button to Admin.",
+      "Added a user creation dialog with name, role, manager, and color.",
+      "New users are saved to the people table and immediately appear in owner, lead, and calendar selections.",
+    ],
+    notes: ["Users here are TRNAWL app people, not Supabase login accounts."],
+  },
 ];
 
 const ticketTypes = [
@@ -436,6 +448,7 @@ function bindEvents() {
   $("#customerForm").addEventListener("submit", createCustomer);
   $("#customerEditForm").addEventListener("submit", updateCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
+  $("#personForm").addEventListener("submit", createPerson);
 
   $$(".close-dialog").forEach((button) => {
     button.addEventListener("click", () => button.closest("dialog").close());
@@ -753,13 +766,15 @@ function syncObjectSelects() {
   fillSelect($("#customerSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#customerEditStatus"), customerStatuses);
   fillSelect($("#customerEditSalesLead"), personOptions);
+  fillSelect($("#personManager"), [["", "No manager"], ...personOptions]);
   setTicketDefaults();
   applyTicketTypeRules();
   applyWorkflowCustomerDefaults();
 }
 
 function setSync(message) {
-  $("#syncStatus").textContent = message;
+  const syncStatus = $("#syncStatus");
+  if (syncStatus) syncStatus.textContent = message;
 }
 
 function renderShell() {
@@ -1627,6 +1642,36 @@ async function updateCustomer(event) {
   }
 }
 
+async function createPerson(event) {
+  event.preventDefault();
+  const manager = findById(state.people, $("#personManager").value);
+  const name = $("#personName").value.trim();
+  const role = $("#personRole").value.trim();
+  if (!name || !role) return;
+
+  try {
+    setSync("Creating user");
+    await api("/app_people", {
+      method: "POST",
+      body: {
+        display_name: name,
+        role_label: role,
+        manager_id: manager?.id || null,
+        manager_name: manager?.display_name || null,
+        color: $("#personColor").value || "#0067b1",
+        is_current_user: false,
+      },
+    });
+    $("#personForm").reset();
+    $("#personColor").value = "#0067b1";
+    $("#personDialog").close();
+    await loadData();
+    switchView("admin");
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
 function renderCustomerActions() {
   $("#actionsView").innerHTML = `
     <div class="toolbar">
@@ -2166,7 +2211,13 @@ function renderAdmin() {
         </div>
       </section>
       <section class="panel">
-        <h2>Users</h2>
+        <div class="panel-heading">
+          <div>
+            <h2>Users</h2>
+            <p class="muted">People available for ticket ownership, lead defaults, and calendar planning.</p>
+          </div>
+          <button class="primary-button" type="button" id="addPersonButton"><i data-lucide="user-plus"></i><span>Create User</span></button>
+        </div>
         <div class="table-wrap">
           <table>
             <thead><tr><th>Name</th><th>Role</th><th>Manager</th><th>Color</th><th>Status</th></tr></thead>
@@ -2191,7 +2242,15 @@ function renderAdmin() {
       </section>
     </div>
   `;
+  $("#addPersonButton").addEventListener("click", openPersonDialog);
   $("#deleteAllTicketsButton").addEventListener("click", deleteAllTickets);
+}
+
+function openPersonDialog() {
+  $("#personForm").reset();
+  $("#personColor").value = "#0067b1";
+  syncObjectSelects();
+  $("#personDialog").showModal();
 }
 
 function labelFor(options, value) {
