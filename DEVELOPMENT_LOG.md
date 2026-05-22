@@ -59,3 +59,16 @@ Changed:
 - Added two demo sales people: Harry Dumm and Lloyd Duemmer.
 - Stored Sales Lead as a ticket reference and display name.
 - Kept Delivery Lead, Sales Lead, and Opportunity Lead as separate responsibility fields.
+
+### Customer and Ownership Cleanup
+
+Added clearer customer and user visibility.
+
+Changed:
+
+- Added Customers navigation with customer tiles.
+- Added customer creation with segment, status, primary contact, email, and notes.
+- Added a customer detail page with related tickets and customer actions.
+- Moved the user overview into Admin.
+- Added Owner as the person doing the work while keeping Delivery Lead as the lead role.
+- Made readiness checks conditional by ticket type so generic and internal tasks stay lightweight.

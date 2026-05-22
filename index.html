@@ -48,6 +48,7 @@
           <button class="nav-item active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
           <button class="nav-item" data-view="tickets"><i data-lucide="kanban-square"></i><span>Tickets</span></button>
           <button class="nav-item" data-view="workflows"><i data-lucide="workflow"></i><span>Workflows</span></button>
+          <button class="nav-item" data-view="customers"><i data-lucide="building-2"></i><span>Customers</span></button>
           <button class="nav-item" data-view="actions"><i data-lucide="clipboard-check"></i><span>Customer Actions</span></button>
           <button class="nav-item" data-view="calendar"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
           <button class="nav-item" data-view="reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></button>
@@ -73,6 +74,7 @@
         <section id="dashboardView" class="view active"></section>
         <section id="ticketsView" class="view"></section>
         <section id="workflowsView" class="view"></section>
+        <section id="customersView" class="view"></section>
         <section id="actionsView" class="view"></section>
         <section id="calendarView" class="view"></section>
         <section id="reportsView" class="view"></section>
@@ -95,6 +97,7 @@
           <label class="span-2">Description<textarea id="ticketDescription" rows="4"></textarea></label>
           <label>Type<select id="ticketType"></select></label>
           <label>Priority<select id="ticketPriority"></select></label>
+          <label>Owner<select id="ticketOwner"></select></label>
           <label>Delivery Lead<select id="ticketDeliveryLead"></select></label>
           <label>Sales Lead<select id="ticketSalesLead"></select></label>
           <label>Opportunity Lead<select id="ticketOpportunityLead"></select></label>
@@ -102,14 +105,10 @@
           <label>Due date<input id="ticketDueDate" type="date" /></label>
           <label>Blocked reason<select id="ticketBlockedReason"></select></label>
         </div>
-        <fieldset class="readiness-fieldset">
+        <fieldset id="readinessFieldset" class="readiness-fieldset">
           <legend>Readiness checks</legend>
-          <label><input type="checkbox" name="readiness" value="scope_clear" /> Scope clear</label>
-          <label><input type="checkbox" name="readiness" value="customer_dependencies_listed" /> Customer dependencies listed</label>
-          <label><input type="checkbox" name="readiness" value="dates_realistic" /> Dates realistic</label>
-          <label><input type="checkbox" name="readiness" value="success_criteria_clear" /> Success criteria clear</label>
-          <label><input type="checkbox" name="readiness" value="delivery_capacity_realistic" /> Delivery capacity realistic</label>
-          <label><input type="checkbox" name="readiness" value="handoff_plan_clear" /> Handoff plan clear</label>
+          <p id="readinessHelp" class="fieldset-note"></p>
+          <div id="readinessOptions" class="readiness-options"></div>
         </fieldset>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
@@ -130,6 +129,7 @@
         <div class="form-grid">
           <label>Customer<select id="workflowCustomer" required></select></label>
           <label>Opportunity reference<input id="workflowOpportunity" placeholder="Optional" /></label>
+          <label>Owner<select id="workflowOwner"></select></label>
           <label>Delivery Lead<select id="workflowDeliveryLead"></select></label>
           <label>Sales Lead<select id="workflowSalesLead"></select></label>
           <label>Opportunity Lead<select id="workflowOpportunityLead"></select></label>
@@ -139,6 +139,30 @@
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
           <button class="primary-button" type="submit">Create Workflow</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="customerDialog" class="modal">
+      <form id="customerForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Create Customer</h2>
+            <p>Keep the customer list structured enough for tickets, actions, and delivery visibility.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label>Name<input id="customerName" required /></label>
+          <label>Segment<input id="customerSegment" placeholder="Enterprise, strategic, commercial" /></label>
+          <label>Primary contact<input id="customerPrimaryContact" /></label>
+          <label>Contact email<input id="customerContactEmail" type="email" /></label>
+          <label>Status<select id="customerStatus"></select></label>
+          <label class="span-2">Notes<textarea id="customerNotes" rows="3"></textarea></label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Create Customer</button>
         </div>
       </form>
     </dialog>

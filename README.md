@@ -14,7 +14,7 @@ The core issue is not tooling. The core issue is execution visibility:
 
 - Who owns this?
 - Is delivery involved?
-- Is pricing approved?
+- Are commercial inputs ready?
 - Did legal review it?
 - What is blocked?
 - Why is this delayed?
@@ -25,13 +25,14 @@ TRNAWL provides a Jira-like board where useful, but avoids Jira-like complexity.
 ## Core Features
 
 - Fast ticket creation for SOWs, delivery reviews, internal tasks, and customer actions
-- Clear ownership with assignees, due dates, status, and priority
+- Clear ownership with Owner, Delivery Lead, Sales Lead, Opportunity Lead, due dates, status, and priority
 - Drag-and-drop ticket board with simple workflow stages
 - Reminder support before tickets become overdue
-- Delivery review tracking for handoffs, approvals, and follow-up actions
+- Customer overview with tiles, basic customer records, related tickets, and customer actions
+- Delivery review tracking for handoffs, assumptions, risks, and follow-up actions
 - Operational visibility through dashboards, reports, and calendar views
 - Templates and configurable workflows for repeatable delivery processes
-- Lightweight governance checks for pricing, scope, legal, delivery, and customer handoffs
+- Lightweight governance checks for SOWs, delivery reviews, and customer-facing actions
 - Team capacity visibility for simple operational planning
 - Operational readiness scores for SOWs and delivery work
 - Blocked reason tracking with useful reporting categories
@@ -48,7 +49,7 @@ Before submitting a ticket, users can ask AI to improve the draft. The AI should
 - Fix grammar and formatting
 - Structure the request into clearer ticket text
 - Suggest missing fields such as owner, due date, priority, workflow stage, or acceptance criteria
-- Flag missing operational context such as scope assumptions, pricing inputs, delivery feasibility, customer dependencies, or SLA risks
+- Flag missing operational context such as scope assumptions, commercial inputs, delivery feasibility, customer dependencies, or SLA risks
 - Preserve the user's intent
 - Show all proposed changes for review before the user accepts them
 
@@ -64,11 +65,11 @@ Workflows capture organizational experience:
 
 - How a new SOW should move from intake to delivery review
 - Which checks must happen before customer presentation
-- When pricing, legal, delivery, and scope boundary reviews are needed
+- When sales input, legal input, delivery feasibility, and scope boundary checks are needed
 - Which customer actions should be created automatically
 - What operational risks should be visible early
 
-Example: a **New SOW Workflow** can automatically create delivery review, pricing review, legal review, scope boundary review, and customer deck review tasks. This turns repeated tribal knowledge into a repeatable operating model.
+Example: a **New SOW Workflow** can automatically create delivery review, commercial input check, legal input check, scope boundary review, and customer deck review tasks. This turns repeated tribal knowledge into a repeatable operating model.
 
 ## Operational Readiness
 
@@ -76,14 +77,14 @@ TRNAWL should make readiness visible without becoming a checklist monster.
 
 Each SOW or delivery workflow should be able to show whether the basics are covered:
 
-- Delivery reviewed
-- Pricing reviewed
 - Scope boundaries clear
-- Owner assigned
 - Customer dependencies listed
 - Due dates realistic
+- Success criteria clear
+- Delivery capacity realistic
+- Handoff plan clear
 
-This can start as a simple score and checklist, then become smarter as AI governance matures.
+Generic tasks and internal actions should not force this checklist. They should stay quick: owner, due date, context, and status.
 
 ## Delivery Review Workflow
 
@@ -113,6 +114,7 @@ Initial navigation should include:
 
 - Dashboard
 - Tickets
+- Customers
 - Calendar
 - Reports
 - Admin
@@ -130,7 +132,7 @@ The MVP should focus on a narrow, useful workflow:
 - Set due dates and priorities
 - Move tickets across workflow stages
 - Filter by owner, status, due date, and priority
-- Track blocked reasons such as delivery input, pricing, legal, customer dependency, unclear scope, missing owner, unresolved dependency, or pending approval
+- Track blocked reasons such as delivery input, commercial input, legal input, customer dependency, unclear scope, missing owner, unresolved dependency, or pending approval
 - Show overdue and upcoming work
 - Support basic delivery review stages
 - Provide an **Improve with AI** review step before ticket submission
@@ -149,8 +151,9 @@ Included now:
 - Supabase email/password authentication
 - Dashboard with open, overdue, blocked, and customer-action counts
 - Drag-and-drop ticket board
-- Ticket creation with Delivery Lead, Sales Lead, Opportunity Lead, customer, due date, priority, blocked reason, and readiness checks
+- Ticket creation with Owner, Delivery Lead, Sales Lead, Opportunity Lead, customer, due date, priority, blocked reason, and type-specific readiness checks
 - Selectable demo people and customers for ticket creation
+- Customers view with customer tiles, customer creation, and detail pages
 - Workflow template view
 - New SOW Workflow starter that creates review tickets
 - Customer action register

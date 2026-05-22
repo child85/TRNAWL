@@ -12,6 +12,7 @@ const state = {
   customerActions: [],
   people: [],
   customers: [],
+  selectedCustomerId: null,
   search: "",
   typeFilter: "all",
 };
@@ -20,6 +21,7 @@ const viewMeta = {
   dashboard: ["Dashboard", "Operational health, blockers, and work needing attention."],
   tickets: ["Tickets", "Move work through simple stages with ownership and due dates."],
   workflows: ["Workflows", "Start repeatable operational review paths."],
+  customers: ["Customers", "Customer tiles, contacts, related tickets, and open actions."],
   actions: ["Customer Actions", "External dependencies with internal accountability."],
   calendar: ["Calendar", "Upcoming work, due dates, and customer follow-ups."],
   reports: ["Reports", "Blocked work, aging, readiness, and customer action visibility."],
@@ -93,6 +95,19 @@ const developmentLog = [
     ],
     notes: ["Delivery Lead, Sales Lead, and Opportunity Lead are now separate responsibilities."],
   },
+  {
+    date: "2026-05-22",
+    title: "Customer and ownership cleanup",
+    summary: "Added customer overview/detail pages and separated ticket Owner from Delivery Lead.",
+    changes: [
+      "Added Customers navigation with customer tiles and a detail page.",
+      "Added customer creation with status, segment, contact, email, and notes.",
+      "Moved user overview into Admin.",
+      "Added Owner as the person doing the work while keeping Delivery Lead as the lead role.",
+      "Made readiness checks depend on ticket type so generic/internal tasks stay lightweight.",
+    ],
+    notes: ["Readiness now appears for SOW, delivery review, and customer-action tickets only."],
+  },
 ];
 
 const ticketTypes = [
@@ -113,8 +128,8 @@ const priorities = [
 const blockedReasons = [
   ["", "Not blocked"],
   ["waiting_for_delivery", "Waiting for delivery"],
-  ["waiting_for_pricing", "Waiting for pricing"],
-  ["waiting_for_legal", "Waiting for legal"],
+  ["waiting_for_pricing", "Waiting for commercial input"],
+  ["waiting_for_legal", "Waiting for legal input"],
   ["waiting_for_customer", "Waiting for customer"],
   ["scope_unclear", "Scope unclear"],
   ["owner_missing", "Owner missing"],
@@ -130,14 +145,53 @@ const actionStatuses = [
   ["cancelled", "Cancelled"],
 ];
 
-const readinessKeys = [
-  "scope_clear",
-  "customer_dependencies_listed",
-  "dates_realistic",
-  "success_criteria_clear",
-  "delivery_capacity_realistic",
-  "handoff_plan_clear",
+const customerStatuses = [
+  ["active", "Active"],
+  ["paused", "Paused"],
+  ["inactive", "Inactive"],
 ];
+
+const readinessByType = {
+  task: {
+    help: "Generic tasks should stay fast. Add context in the description instead of forcing a checklist.",
+    checks: [],
+  },
+  internal_action: {
+    help: "Internal actions only need an owner and due date for now.",
+    checks: [],
+  },
+  sow: {
+    help: "Use these checks when the ticket affects a customer-facing SOW or proposal.",
+    checks: [
+      ["scope_clear", "Scope boundaries clear"],
+      ["customer_dependencies_listed", "Customer dependencies listed"],
+      ["dates_realistic", "Dates realistic"],
+      ["success_criteria_clear", "Success criteria clear"],
+      ["delivery_capacity_realistic", "Delivery capacity realistic"],
+      ["handoff_plan_clear", "Handoff plan clear"],
+    ],
+  },
+  delivery_review: {
+    help: "Use these checks when delivery needs to review feasibility, risks, and handoff readiness.",
+    checks: [
+      ["scope_clear", "Scope understood"],
+      ["assumptions_documented", "Assumptions documented"],
+      ["risks_logged", "Delivery risks logged"],
+      ["delivery_capacity_realistic", "Capacity realistic"],
+      ["handoff_plan_clear", "Handoff plan clear"],
+    ],
+  },
+  customer_action: {
+    help: "Use these checks when progress depends on the customer or external stakeholder.",
+    checks: [
+      ["customer_owner_confirmed", "Customer owner confirmed"],
+      ["customer_dependencies_listed", "Dependency clearly stated"],
+      ["dates_realistic", "Date realistic"],
+      ["internal_follow_up_clear", "Internal follow-up owner clear"],
+      ["impact_understood", "Impact understood"],
+    ],
+  },
+};
 
 const $ = (selector) => document.querySelector(selector);
 const $$ = (selector) => [...document.querySelectorAll(selector)];
@@ -147,6 +201,8 @@ function init() {
   fillSelect($("#ticketPriority"), priorities, "medium");
   fillSelect($("#ticketBlockedReason"), blockedReasons);
   fillSelect($("#actionStatus"), actionStatuses);
+  fillSelect($("#customerStatus"), customerStatuses);
+  renderReadinessChecks();
   bindEvents();
   renderShell();
   if (state.session?.access_token) {
@@ -164,7 +220,9 @@ function bindEvents() {
   $("#refreshButton").addEventListener("click", loadData);
   $("#newTicketButton").addEventListener("click", () => $("#ticketDialog").showModal());
   $("#ticketForm").addEventListener("submit", createTicket);
+  $("#ticketType").addEventListener("change", renderReadinessChecks);
   $("#workflowForm").addEventListener("submit", startWorkflow);
+  $("#customerForm").addEventListener("submit", createCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
 
   $$(".close-dialog").forEach((button) => {
@@ -178,6 +236,26 @@ function bindEvents() {
 
 function fillSelect(select, options, selected = "") {
   select.innerHTML = options.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
+}
+
+function currentReadinessConfig() {
+  return readinessByType[$("#ticketType")?.value] || readinessByType.task;
+}
+
+function renderReadinessChecks() {
+  const fieldset = $("#readinessFieldset");
+  if (!fieldset) return;
+  const config = currentReadinessConfig();
+  fieldset.classList.toggle("hidden", !config.checks.length);
+  $("#readinessHelp").textContent = config.help;
+  $("#readinessOptions").innerHTML = config.checks.map(([value, label]) => `
+    <label><input type="checkbox" name="readiness" value="${value}" /> ${escapeHtml(label)}</label>
+  `).join("");
+}
+
+function readinessPayloadForType(ticketType) {
+  const checks = readinessByType[ticketType]?.checks || [];
+  return Object.fromEntries(checks.map(([key]) => [key, Boolean($(`input[name="readiness"][value="${key}"]`)?.checked)]));
 }
 
 async function signIn() {
@@ -330,9 +408,11 @@ function syncObjectSelects() {
   const fallbackSalesLead = state.people.find((person) => person.display_name === "Harry Dumm") || state.people.find((person) => person.role_label.includes("Sales")) || state.people[0];
   const fallbackOpportunityLead = state.people.find((person) => person.display_name === "Lola Bunny") || state.people[1] || currentUser;
 
+  fillSelect($("#ticketOwner"), personOptions, currentUser?.id || "");
   fillSelect($("#ticketDeliveryLead"), personOptions, currentUser?.id || "");
   fillSelect($("#ticketSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#ticketOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
+  fillSelect($("#workflowOwner"), personOptions, currentUser?.id || "");
   fillSelect($("#workflowDeliveryLead"), personOptions, currentUser?.id || "");
   fillSelect($("#workflowSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#workflowOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
@@ -357,6 +437,7 @@ function renderAll() {
   renderDashboard();
   renderTickets();
   renderWorkflows();
+  renderCustomers();
   renderCustomerActions();
   renderCalendar();
   renderReports();
@@ -408,12 +489,12 @@ function ticketTable(tickets) {
   return `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Ticket</th><th>Delivery Lead</th><th>Due</th><th>Status</th></tr></thead>
+        <thead><tr><th>Ticket</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
         <tbody>
           ${tickets.map((ticket) => `
             <tr>
               <td>${escapeHtml(ticket.title)}</td>
-              <td>${escapeHtml(ticket.owner_name || "Unassigned")}</td>
+              <td>${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</td>
               <td>${formatDate(ticket.due_date)}</td>
               <td>${ticketPills(ticket)}</td>
             </tr>
@@ -435,7 +516,7 @@ function renderTickets() {
   const stages = state.stages.filter((stage) => stage.stage_type === "ticket");
   const filtered = state.tickets.filter((ticket) => {
     const search = state.search.toLowerCase();
-    const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.owner_name, ticket.sales_lead_name, ticket.requester_name].filter(Boolean).join(" ").toLowerCase().includes(search);
+    const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.work_owner_name, ticket.owner_name, ticket.delivery_lead_name, ticket.sales_lead_name, ticket.requester_name].filter(Boolean).join(" ").toLowerCase().includes(search);
     const matchesType = state.typeFilter === "all" || ticket.ticket_type === state.typeFilter;
     return matchesSearch && matchesType;
   });
@@ -485,7 +566,8 @@ function ticketCard(ticket) {
       <div class="tag-row">
         <span class="pill primary">${labelFor(ticketTypes, ticket.ticket_type)}</span>
         ${ticketPills(ticket)}
-        <span class="pill">${escapeHtml(ticket.owner_name || "No delivery lead")}</span>
+        <span class="pill">Owner: ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span>
+        ${ticket.delivery_lead_name ? `<span class="pill">Delivery: ${escapeHtml(ticket.delivery_lead_name)}</span>` : ""}
       </div>
     </article>
   `;
@@ -536,9 +618,12 @@ async function updateTicketStage(ticketId, stageId) {
 
 async function createTicket(event) {
   event.preventDefault();
-  const readiness = Object.fromEntries(readinessKeys.map((key) => [key, Boolean($(`input[name="readiness"][value="${key}"]`).checked)]));
-  const readinessScore = Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100);
+  const ticketType = $("#ticketType").value;
+  const readiness = readinessPayloadForType(ticketType);
+  const readinessKeys = Object.keys(readiness);
+  const readinessScore = readinessKeys.length ? Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100) : 0;
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
+  const owner = findById(state.people, $("#ticketOwner").value);
   const deliveryLead = findById(state.people, $("#ticketDeliveryLead").value);
   const salesLead = findById(state.people, $("#ticketSalesLead").value);
   const opportunityLead = findById(state.people, $("#ticketOpportunityLead").value);
@@ -546,14 +631,17 @@ async function createTicket(event) {
   const body = {
     title: $("#ticketTitle").value.trim(),
     description: $("#ticketDescription").value.trim() || null,
-    ticket_type: $("#ticketType").value,
+    ticket_type: ticketType,
     priority: $("#ticketPriority").value,
+    work_owner_id: owner?.id || null,
+    work_owner_name: owner?.display_name || null,
     delivery_lead_id: deliveryLead?.id || null,
+    delivery_lead_name: deliveryLead?.display_name || null,
     sales_lead_id: salesLead?.id || null,
     sales_lead_name: salesLead?.display_name || null,
     opportunity_lead_id: opportunityLead?.id || null,
     customer_id: customer?.id || null,
-    owner_name: deliveryLead?.display_name || null,
+    owner_name: owner?.display_name || null,
     requester_name: opportunityLead?.display_name || state.user.email,
     customer_name: customer?.name || null,
     due_date: $("#ticketDueDate").value || null,
@@ -570,6 +658,8 @@ async function createTicket(event) {
     await api("/tickets", { method: "POST", body });
     $("#ticketForm").reset();
     $("#ticketPriority").value = "medium";
+    syncObjectSelects();
+    renderReadinessChecks();
     $("#ticketDialog").close();
     await loadData();
   } catch (error) {
@@ -614,6 +704,7 @@ async function startWorkflow(event) {
   const tasks = state.templateTasks.filter((task) => task.template_id === template.id);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
   const customer = findById(state.customers, $("#workflowCustomer").value);
+  const owner = findById(state.people, $("#workflowOwner").value);
   const deliveryLead = findById(state.people, $("#workflowDeliveryLead").value);
   const salesLead = findById(state.people, $("#workflowSalesLead").value);
   const opportunityLead = findById(state.people, $("#workflowOpportunityLead").value);
@@ -646,16 +737,18 @@ async function startWorkflow(event) {
           blocked_since: task.default_blocked_reason ? new Date().toISOString() : null,
           customer_id: customer?.id || null,
           customer_name: customer?.name || null,
+          work_owner_id: owner?.id || null,
+          work_owner_name: owner?.display_name || null,
           delivery_lead_id: deliveryLead?.id || null,
+          delivery_lead_name: deliveryLead?.display_name || null,
           sales_lead_id: salesLead?.id || null,
           sales_lead_name: salesLead?.display_name || null,
           opportunity_lead_id: opportunityLead?.id || null,
-          owner_name: deliveryLead?.display_name || null,
+          owner_name: owner?.display_name || null,
           requester_name: opportunityLead?.display_name || state.user.email,
           due_date: dueDate.toISOString().slice(0, 10),
           status_stage_id: newStage?.id || null,
           requester_id: state.user.id,
-          requester_name: state.user.email,
         },
       });
       await api("/workflow_run_tickets", {
@@ -669,9 +762,135 @@ async function startWorkflow(event) {
     }
 
     $("#workflowForm").reset();
+    syncObjectSelects();
     $("#workflowDialog").close();
     await loadData();
     switchView("tickets");
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+function renderCustomers() {
+  const selected = state.selectedCustomerId ? findById(state.customers, state.selectedCustomerId) : null;
+  if (selected) {
+    renderCustomerDetail(selected);
+    return;
+  }
+
+  $("#customersView").innerHTML = `
+    <div class="toolbar">
+      <div></div>
+      <button class="primary-button" type="button" id="addCustomerButton"><i data-lucide="plus"></i><span>Customer</span></button>
+    </div>
+    <div class="customer-tile-grid">
+      ${state.customers.map(customerTile).join("") || `<div class="empty-state">No customers yet.</div>`}
+    </div>
+  `;
+
+  $("#addCustomerButton").addEventListener("click", () => $("#customerDialog").showModal());
+  $$(".customer-detail-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      state.selectedCustomerId = button.dataset.customerId;
+      renderCustomers();
+      refreshIcons();
+    });
+  });
+}
+
+function customerTile(customer) {
+  const tickets = state.tickets.filter((ticket) => ticket.customer_id === customer.id || ticket.customer_name === customer.name);
+  const actions = state.customerActions.filter((action) => action.customer_id === customer.id || action.customer_name === customer.name);
+  const openActions = actions.filter((action) => !["done", "cancelled"].includes(action.status));
+  return `
+    <article class="customer-tile">
+      <div>
+        <h3>${escapeHtml(customer.name)}</h3>
+        <p>${escapeHtml(customer.primary_contact || customer.segment || "No primary contact yet")}</p>
+      </div>
+      <div class="tag-row">
+        <span class="pill primary">${escapeHtml(customer.segment || "No segment")}</span>
+        <span class="pill ${customer.status === "active" ? "success" : ""}">${labelFor(customerStatuses, customer.status || "active")}</span>
+      </div>
+      <div class="customer-stats">
+        <span><strong>${tickets.length}</strong> tickets</span>
+        <span><strong>${openActions.length}</strong> open actions</span>
+      </div>
+      <button class="secondary-button customer-detail-button" type="button" data-customer-id="${customer.id}">Details</button>
+    </article>
+  `;
+}
+
+function renderCustomerDetail(customer) {
+  const tickets = state.tickets.filter((ticket) => ticket.customer_id === customer.id || ticket.customer_name === customer.name);
+  const actions = state.customerActions.filter((action) => action.customer_id === customer.id || action.customer_name === customer.name);
+  $("#customersView").innerHTML = `
+    <div class="detail-header">
+      <button class="secondary-button" type="button" id="backToCustomers"><i data-lucide="arrow-left"></i><span>Customers</span></button>
+      <button class="primary-button" type="button" id="addCustomerButton"><i data-lucide="plus"></i><span>Customer</span></button>
+    </div>
+    <div class="content-grid">
+      <section class="panel">
+        <h2>${escapeHtml(customer.name)}</h2>
+        <div class="mini-list">
+          <div><strong>Segment</strong><br><span class="muted">${escapeHtml(customer.segment || "Not set")}</span></div>
+          <div><strong>Status</strong><br><span class="muted">${labelFor(customerStatuses, customer.status || "active")}</span></div>
+          <div><strong>Primary contact</strong><br><span class="muted">${escapeHtml(customer.primary_contact || "Not set")}</span></div>
+          <div><strong>Email</strong><br><span class="muted">${escapeHtml(customer.contact_email || "Not set")}</span></div>
+          <div><strong>Notes</strong><br><span class="muted">${escapeHtml(customer.notes || "No notes yet")}</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Operational Snapshot</h2>
+        <div class="metric-grid compact">
+          ${metric("Tickets", tickets.length)}
+          ${metric("Actions", actions.length)}
+          ${metric("Overdue", tickets.filter(isOverdue).length + actions.filter(isOverdue).length, "danger")}
+          ${metric("Blocked", tickets.filter((ticket) => ticket.blocked_reason).length, "warning")}
+        </div>
+      </section>
+    </div>
+    <section class="panel" style="margin-top: 16px;">
+      <h2>Related Tickets</h2>
+      ${ticketTable(tickets.slice(0, 10))}
+    </section>
+    <section class="panel" style="margin-top: 16px;">
+      <h2>Customer Actions</h2>
+      <div class="actions-list">
+        ${actions.map(actionItem).join("") || `<div class="empty-state">No actions for this customer.</div>`}
+      </div>
+    </section>
+  `;
+
+  $("#backToCustomers").addEventListener("click", () => {
+    state.selectedCustomerId = null;
+    renderCustomers();
+    refreshIcons();
+  });
+  $("#addCustomerButton").addEventListener("click", () => $("#customerDialog").showModal());
+}
+
+async function createCustomer(event) {
+  event.preventDefault();
+  try {
+    setSync("Creating customer");
+    const [customer] = await api("/customers", {
+      method: "POST",
+      body: {
+        name: $("#customerName").value.trim(),
+        segment: $("#customerSegment").value.trim() || null,
+        primary_contact: $("#customerPrimaryContact").value.trim() || null,
+        contact_email: $("#customerContactEmail").value.trim() || null,
+        status: $("#customerStatus").value,
+        notes: $("#customerNotes").value.trim() || null,
+      },
+    });
+    state.selectedCustomerId = customer?.id || null;
+    $("#customerForm").reset();
+    $("#customerStatus").value = "active";
+    $("#customerDialog").close();
+    await loadData();
+    switchView("customers");
   } catch (error) {
     setSync(error.message);
   }
@@ -705,12 +924,14 @@ function actionItem(action) {
 
 async function createCustomerAction(event) {
   event.preventDefault();
+  const customer = findById(state.customers, $("#actionCustomer").value);
   try {
     setSync("Creating action");
     await api("/customer_actions", {
       method: "POST",
       body: {
-        customer_name: findById(state.customers, $("#actionCustomer").value)?.name || null,
+        customer_id: customer?.id || null,
+        customer_name: customer?.name || null,
         customer_owner: $("#actionCustomerOwner").value.trim() || null,
         action: $("#actionText").value.trim(),
         due_date: $("#actionDueDate").value || null,
@@ -746,7 +967,7 @@ function calendarDay(date) {
     <article class="calendar-item">
       <div class="calendar-date">${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>
       <div class="mini-list">
-        ${tickets.map((ticket) => `<div>${escapeHtml(ticket.title)}<br><span class="muted">${escapeHtml(ticket.owner_name || "Unassigned")}</span></div>`).join("")}
+        ${tickets.map((ticket) => `<div>${escapeHtml(ticket.title)}<br><span class="muted">${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span></div>`).join("")}
         ${actions.map((action) => `<div>${escapeHtml(action.action)}<br><span class="muted">${escapeHtml(action.customer_name)}</span></div>`).join("")}
       </div>
     </article>
@@ -809,7 +1030,24 @@ function renderAdmin() {
         <div class="mini-list">
           <div><strong>Supabase</strong><br><span class="muted">${SUPABASE_URL}</span></div>
           <div><strong>User</strong><br><span class="muted">${escapeHtml(state.user?.email || "")}</span></div>
-          <div><strong>Tables loaded</strong><br><span class="muted">tickets, workflow templates, customer actions</span></div>
+          <div><strong>Tables loaded</strong><br><span class="muted">tickets, customers, people, workflow templates, customer actions</span></div>
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Users</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Name</th><th>Role</th><th>Status</th></tr></thead>
+            <tbody>
+              ${state.people.map((person) => `
+                <tr>
+                  <td>${escapeHtml(person.display_name)}</td>
+                  <td>${escapeHtml(person.role_label)}</td>
+                  <td>${person.is_current_user ? `<span class="pill primary">Default user</span>` : `<span class="pill">Demo user</span>`}</td>
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
         </div>
       </section>
     </div>
