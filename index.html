@@ -158,7 +158,6 @@
               <label class="span-2">Description<textarea id="ticketDetailDescription" rows="5"></textarea></label>
               <label>Type<select id="ticketDetailType"></select></label>
               <label>Priority<select id="ticketDetailPriority"></select></label>
-              <label>Owner<select id="ticketDetailOwner"></select></label>
               <label class="detail-delivery-field">Delivery Lead<select id="ticketDetailDeliveryLead"></select></label>
               <label class="detail-sales-field">Sales Lead<select id="ticketDetailSalesLead"></select></label>
               <label class="detail-customer-field">Customer<select id="ticketDetailCustomer"></select></label>
@@ -171,6 +170,11 @@
               <p id="ticketDetailReadinessHelp" class="fieldset-note"></p>
               <div id="ticketDetailReadinessOptions" class="readiness-options"></div>
             </fieldset>
+            <section class="assignment-panel">
+              <h3>Assignment</h3>
+              <p>Owner changes should be deliberate. Use this when the work actually moves to someone else.</p>
+              <label>Owner<select id="ticketDetailOwner"></select></label>
+            </section>
           </section>
           <aside class="detail-side">
             <h3>Updates</h3>

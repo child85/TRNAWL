@@ -17,6 +17,10 @@ const state = {
   selectedTicketId: null,
   search: "",
   typeFilter: "all",
+  ownerFilter: "me",
+  calendarRoleFilter: "all",
+  calendarNameFilter: "",
+  calendarReservations: JSON.parse(localStorage.getItem("trnawl.calendarReservations") || "[]"),
 };
 
 const viewMeta = {
@@ -137,6 +141,20 @@ const developmentLog = [
       "Changed Calendar into user lanes with draggable ticket assignment by person and due date.",
     ],
     notes: ["Ticket details now work more like an operational work item than a read-only preview."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Usability cleanup",
+    summary: "Improved customer detail tiles, ticket updates, ticket filtering, and calendar capacity planning.",
+    changes: [
+      "Changed customer detail information into modern tiles.",
+      "Moved ticket Owner editing into a separate bottom assignment area.",
+      "Save Ticket now also saves a typed update.",
+      "Tickets default to the current user's work with an owner filter.",
+      "Changed Calendar back to a capacity board with draggable team members.",
+      "Added role and name filters for the calendar team list.",
+    ],
+    notes: ["Calendar reservations are saved locally in the browser for this MVP."],
   },
 ];
 
@@ -665,12 +683,23 @@ function blockedReasonList() {
 
 function renderTickets() {
   const stages = state.stages.filter((stage) => stage.stage_type === "ticket");
+  const currentPerson = getCurrentPerson();
   const filtered = state.tickets.filter((ticket) => {
     const search = state.search.toLowerCase();
     const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.work_owner_name, ticket.owner_name, ticket.delivery_lead_name, ticket.sales_lead_name, ticket.requester_name].filter(Boolean).join(" ").toLowerCase().includes(search);
     const matchesType = state.typeFilter === "all" || ticket.ticket_type === state.typeFilter;
-    return matchesSearch && matchesType;
+    const matchesOwner =
+      state.ownerFilter === "all" ||
+      (state.ownerFilter === "me" && currentPerson && (ticket.work_owner_id === currentPerson.id || ticket.work_owner_name === currentPerson.display_name || ticket.owner_name === currentPerson.display_name)) ||
+      ticket.work_owner_id === state.ownerFilter ||
+      ticket.work_owner_name === state.ownerFilter;
+    return matchesSearch && matchesType && matchesOwner;
   });
+  const ownerOptions = [
+    ["me", "My tickets"],
+    ["all", "All owners"],
+    ...state.people.map((person) => [person.id, person.display_name]),
+  ];
 
   $("#ticketsView").innerHTML = `
     <div class="toolbar">
@@ -679,6 +708,9 @@ function renderTickets() {
         <select id="typeFilter">
           <option value="all">All types</option>
           ${ticketTypes.map(([value, label]) => `<option value="${value}" ${state.typeFilter === value ? "selected" : ""}>${label}</option>`).join("")}
+        </select>
+        <select id="ownerFilter">
+          ${ownerOptions.map(([value, label]) => `<option value="${value}" ${state.ownerFilter === value ? "selected" : ""}>${label}</option>`).join("")}
         </select>
       </div>
       <button class="primary-button" type="button" id="boardNewTicket"><i data-lucide="plus"></i><span>Ticket</span></button>
@@ -694,6 +726,10 @@ function renderTickets() {
   });
   $("#typeFilter").addEventListener("change", (event) => {
     state.typeFilter = event.target.value;
+    renderTickets();
+  });
+  $("#ownerFilter").addEventListener("change", (event) => {
+    state.ownerFilter = event.target.value;
     renderTickets();
   });
   $("#boardNewTicket").addEventListener("click", openTicketDialog);
@@ -828,6 +864,7 @@ async function updateTicketDetails(event) {
   const readinessScore = readinessKeys.length ? Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100) : 0;
   try {
     setSync("Saving");
+    const updateText = $("#ticketCommentText").value.trim();
     await api(`/tickets?id=eq.${state.selectedTicketId}`, {
       method: "PATCH",
       body: {
@@ -852,6 +889,9 @@ async function updateTicketDetails(event) {
         readiness_score: readinessScore,
       },
     });
+    if (updateText) {
+      await saveTicketComment(updateText);
+    }
     $("#ticketDetailDialog").close();
     await loadData();
   } catch (error) {
@@ -875,20 +915,24 @@ async function addTicketComment() {
   if (!state.selectedTicketId || !body) return;
   try {
     setSync("Adding update");
-    await api("/ticket_comments", {
-      method: "POST",
-      body: {
-        ticket_id: state.selectedTicketId,
-        author_id: state.user.id,
-        body,
-      },
-    });
+    await saveTicketComment(body);
     state.ticketComments = await api("/ticket_comments?select=*&order=created_at.asc");
     renderTicketComments(state.selectedTicketId);
     setSync("Ready");
   } catch (error) {
     setSync(error.message);
   }
+}
+
+async function saveTicketComment(body) {
+  await api("/ticket_comments", {
+    method: "POST",
+    body: {
+      ticket_id: state.selectedTicketId,
+      author_id: state.user.id,
+      body,
+    },
+  });
 }
 
 async function createTicket(event) {
@@ -1119,13 +1163,13 @@ function renderCustomerDetail(customer) {
     <div class="content-grid">
       <section class="panel">
         <h2>${escapeHtml(customer.name)}</h2>
-        <div class="mini-list">
-          <div><strong>Segment</strong><br><span class="muted">${escapeHtml(customer.segment || "Not set")}</span></div>
-          <div><strong>Status</strong><br><span class="muted">${labelFor(customerStatuses, customer.status || "active")}</span></div>
-          <div><strong>Primary contact</strong><br><span class="muted">${escapeHtml(customer.primary_contact || "Not set")}</span></div>
-          <div><strong>Email</strong><br><span class="muted">${escapeHtml(customer.contact_email || "Not set")}</span></div>
-          <div><strong>Sales Lead</strong><br><span class="muted">${escapeHtml(customer.sales_lead_name || "Not set")}</span></div>
-          <div><strong>Notes</strong><br><span class="muted">${escapeHtml(customer.notes || "No notes yet")}</span></div>
+        <div class="customer-info-grid">
+          ${infoTile("Segment", customer.segment || "Not set", "building-2")}
+          ${infoTile("Status", labelFor(customerStatuses, customer.status || "active"), "activity")}
+          ${infoTile("Primary Contact", customer.primary_contact || "Not set", "user")}
+          ${infoTile("Email", customer.contact_email || "Not set", "mail")}
+          ${infoTile("Sales Lead", customer.sales_lead_name || "Not set", "briefcase-business")}
+          ${infoTile("Notes", customer.notes || "No notes yet", "notebook-text", true)}
         </div>
       </section>
       <section class="panel">
@@ -1158,6 +1202,18 @@ function renderCustomerDetail(customer) {
   $("#addCustomerButton").addEventListener("click", () => $("#customerDialog").showModal());
   $("#editCustomerButton").addEventListener("click", () => openCustomerEdit(customer.id));
   bindTicketDetailButtons();
+}
+
+function infoTile(label, value, icon, wide = false) {
+  return `
+    <article class="info-tile ${wide ? "wide" : ""}">
+      <span class="info-icon"><i data-lucide="${icon}"></i></span>
+      <div>
+        <span>${escapeHtml(label)}</span>
+        <strong>${escapeHtml(value)}</strong>
+      </div>
+    </article>
+  `;
 }
 
 async function createCustomer(event) {
@@ -1287,51 +1343,100 @@ function renderCalendar() {
     date.setDate(date.getDate() + index);
     return date;
   });
+  const roles = [...new Set(state.people.map((person) => person.role_label))].sort();
+  const filteredPeople = state.people.filter((person) => {
+    const roleMatch = state.calendarRoleFilter === "all" || person.role_label === state.calendarRoleFilter;
+    const nameMatch = !state.calendarNameFilter || person.display_name.toLowerCase().includes(state.calendarNameFilter.toLowerCase());
+    return roleMatch && nameMatch;
+  });
   $("#calendarView").innerHTML = `
-    <div class="calendar-planner">
-      <div class="calendar-header-spacer">User</div>
-      ${days.map((date) => `<div class="calendar-date-head">${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>`).join("")}
-      ${state.people.map((person) => calendarPersonRow(person, days)).join("")}
+    <div class="capacity-layout">
+      <section class="panel">
+        <h2>Team Capacity Calendar</h2>
+        <div class="capacity-calendar">
+          ${days.map((date) => calendarCapacityDay(date)).join("")}
+        </div>
+      </section>
+      <section class="panel">
+        <h2>Team</h2>
+        <div class="calendar-filters">
+          <select id="calendarRoleFilter">
+            <option value="all">All roles</option>
+            ${roles.map((role) => `<option value="${escapeHtml(role)}" ${state.calendarRoleFilter === role ? "selected" : ""}>${escapeHtml(role)}</option>`).join("")}
+          </select>
+          <input id="calendarNameFilter" placeholder="Search people" value="${escapeHtml(state.calendarNameFilter)}" />
+        </div>
+        <div class="team-list">
+          ${filteredPeople.map(teamPersonCard).join("") || `<div class="empty-state">No people match this filter.</div>`}
+        </div>
+      </section>
     </div>
   `;
-  bindCalendarPlanning();
+  $("#calendarRoleFilter").addEventListener("change", (event) => {
+    state.calendarRoleFilter = event.target.value;
+    renderCalendar();
+  });
+  $("#calendarNameFilter").addEventListener("input", (event) => {
+    state.calendarNameFilter = event.target.value;
+    renderCalendar();
+  });
+  bindCapacityCalendar();
 }
 
-function calendarPersonRow(person, days) {
+function calendarCapacityDay(date) {
+  const iso = date.toISOString().slice(0, 10);
+  const isWeekend = [0, 6].includes(date.getDay());
+  const tickets = state.tickets.filter((ticket) => ticket.due_date === iso);
+  const reservations = state.calendarReservations.filter((item) => item.date === iso);
   return `
-    <div class="calendar-person" style="--person-color: ${escapeHtml(person.color || "#235c51")}">
+    <div class="capacity-day ${isWeekend ? "weekend" : ""}" data-date="${iso}">
+      <strong>${date.toLocaleDateString(undefined, { weekday: "short", day: "numeric" })}</strong>
+      ${isWeekend ? `<span class="muted">Weekend</span>` : ""}
+      <div class="capacity-items">
+        ${tickets.map(calendarTicketChip).join("")}
+        ${reservations.map(calendarReservationChip).join("")}
+      </div>
+    </div>
+  `;
+}
+
+function teamPersonCard(person) {
+  return `
+    <article class="team-person-card" draggable="true" data-person-id="${person.id}" style="--person-color: ${escapeHtml(person.color || "#235c51")}">
       <span class="avatar-dot">${escapeHtml(initials(person.display_name))}</span>
       <div>
         <strong>${escapeHtml(person.display_name)}</strong>
-        <span>${escapeHtml(person.role_label)}</span>
+        <span>${escapeHtml(person.role_label)} · Available</span>
       </div>
-    </div>
-    ${days.map((date) => calendarPersonDay(person, date)).join("")}
+    </article>
   `;
 }
 
-function calendarPersonDay(person, date) {
-  const iso = date.toISOString().slice(0, 10);
-  const tickets = state.tickets.filter((ticket) => ticket.due_date === iso && (ticket.work_owner_id === person.id || ticket.work_owner_name === person.display_name || ticket.owner_name === person.display_name));
+function calendarTicketChip(ticket) {
+  const ownerName = ticket.work_owner_name || ticket.owner_name || "Unassigned";
   return `
-    <div class="calendar-cell" data-person-id="${person.id}" data-date="${iso}">
-      ${tickets.map((ticket) => `
-        <button class="calendar-ticket ticket-detail-button" type="button" draggable="true" data-ticket-id="${ticket.id}" style="--person-color: ${escapeHtml(person.color || "#235c51")}">
-          ${escapeHtml(ticket.title)}
-        </button>
-      `).join("")}
-    </div>
+    <button class="capacity-chip ticket-detail-button" type="button" data-ticket-id="${ticket.id}" style="--person-color: ${escapeHtml(colorForPersonName(ownerName))}">
+      ${escapeHtml(ticket.title)}
+    </button>
   `;
 }
 
-function bindCalendarPlanning() {
-  $$(".calendar-ticket").forEach((ticket) => {
-    ticket.addEventListener("dragstart", (event) => {
-      event.dataTransfer.setData("text/plain", ticket.dataset.ticketId);
+function calendarReservationChip(reservation) {
+  return `
+    <span class="capacity-chip reservation-chip" style="--person-color: ${escapeHtml(reservation.color || "#235c51")}">
+      ${escapeHtml(reservation.personName)}
+    </span>
+  `;
+}
+
+function bindCapacityCalendar() {
+  $$(".team-person-card").forEach((card) => {
+    card.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", `person:${card.dataset.personId}`);
     });
   });
 
-  $$(".calendar-cell").forEach((cell) => {
+  $$(".capacity-day").forEach((cell) => {
     cell.addEventListener("dragover", (event) => {
       event.preventDefault();
       cell.classList.add("drop-target");
@@ -1340,31 +1445,29 @@ function bindCalendarPlanning() {
     cell.addEventListener("drop", async (event) => {
       event.preventDefault();
       cell.classList.remove("drop-target");
-      const person = findById(state.people, cell.dataset.personId);
-      await rescheduleTicket(event.dataTransfer.getData("text/plain"), cell.dataset.date, person);
+      const payload = event.dataTransfer.getData("text/plain");
+      if (!payload.startsWith("person:")) return;
+      addCalendarReservation(payload.replace("person:", ""), cell.dataset.date);
     });
   });
 
   bindTicketDetailButtons();
 }
 
-async function rescheduleTicket(ticketId, dueDate, person) {
-  if (!ticketId || !person) return;
-  try {
-    setSync("Planning");
-    await api(`/tickets?id=eq.${ticketId}`, {
-      method: "PATCH",
-      body: {
-        due_date: dueDate,
-        work_owner_id: person.id,
-        work_owner_name: person.display_name,
-        owner_name: person.display_name,
-      },
-    });
-    await loadData();
-  } catch (error) {
-    setSync(error.message);
-  }
+function addCalendarReservation(personId, date) {
+  const person = findById(state.people, personId);
+  if (!person) return;
+  const reservation = {
+    id: `${personId}-${date}-${Date.now()}`,
+    personId,
+    personName: person.display_name,
+    role: person.role_label,
+    color: person.color,
+    date,
+  };
+  state.calendarReservations = [...state.calendarReservations, reservation];
+  localStorage.setItem("trnawl.calendarReservations", JSON.stringify(state.calendarReservations));
+  renderCalendar();
 }
 
 function renderReports() {

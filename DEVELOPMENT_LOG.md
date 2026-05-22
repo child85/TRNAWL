@@ -100,3 +100,18 @@ Changed:
 - Expanded ticket details into an editable work item view.
 - Added ticket updates/notes.
 - Changed Calendar into user lanes with colored assignments and drag/drop planning.
+
+### Usability Cleanup
+
+Improved daily-use flows based on first feedback.
+
+Changed:
+
+- Changed customer details from list rows into modern information tiles.
+- Moved ticket Owner editing into a separate assignment area at the bottom of ticket details.
+- Made Save Ticket also save a typed update.
+- Defaulted the Tickets view to the current user's tickets.
+- Added an owner filter to the Tickets view.
+- Reworked Calendar back into a capacity board with a Team list.
+- Added role and name filters for the Calendar team list.
+- Added drag-and-drop people reservations on Calendar days.

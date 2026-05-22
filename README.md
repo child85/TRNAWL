@@ -155,7 +155,8 @@ Included now:
 - Ticket details with editable fields, readiness checks, blocked reason, status update, and working notes
 - Customer records with default Sales Lead
 - Admin user overview with manager and calendar color
-- Calendar planning by user, due date, and colored ticket assignment
+- Tickets view defaults to the current user's tickets with an owner filter
+- Calendar capacity board with role/name team filters, colored due tickets, and draggable people reservations
 - Selectable demo people and customers for ticket creation
 - Customers view with customer tiles, customer creation, and detail pages
 - Workflow template view
