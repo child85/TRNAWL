@@ -124,6 +124,7 @@ The navigation should stay practical and familiar. Users should be able to move 
 
 The MVP should focus on a narrow, useful workflow:
 
+- Email/password sign-in through Supabase Auth
 - Create, edit, and delete tickets
 - Assign owners
 - Set due dates and priorities
@@ -138,6 +139,25 @@ The MVP should focus on a narrow, useful workflow:
 - Include a simple team capacity calendar focused on who is blocked, reserved, or overloaded
 - Include a customer action register
 - Generate a weekly operational brief from overdue work, stale actions, delayed reviews, and capacity pressure
+
+## Current MVP
+
+The first deployable MVP is a static Azure Static Web Apps frontend backed by Supabase.
+
+Included now:
+
+- Supabase email/password authentication
+- Dashboard with open, overdue, blocked, and customer-action counts
+- Drag-and-drop ticket board
+- Ticket creation with owner, customer, due date, priority, blocked reason, and readiness checks
+- Workflow template view
+- New SOW Workflow starter that creates review tickets
+- Customer action register
+- Calendar view for upcoming ticket and customer-action due dates
+- Basic reports for weekly operational visibility
+- Admin/status page
+
+AI features are intentionally excluded from this first MVP.
 
 ## Future Roadmap
 
@@ -164,12 +184,17 @@ The MVP should focus on a narrow, useful workflow:
 
 ```text
 TRNAWL/
+├── app.js
 ├── docs/
 │   ├── product-overview.md
 │   ├── product-strategy.md
 │   └── workflow.md
-├── src/
-│   └── README.md
+├── index.html
+├── styles.css
+├── staticwebapp.config.json
+├── supabase/
+│   ├── README.md
+│   └── migrations/
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -177,7 +202,7 @@ TRNAWL/
 
 ## Setup
 
-This repository is intentionally lightweight. There is no application runtime yet.
+This repository is intentionally lightweight. The current MVP is a static frontend and does not require a build step.
 
 To get started locally:
 
@@ -186,7 +211,19 @@ git clone https://github.com/child85/TRNAWL.git
 cd TRNAWL
 ```
 
-As implementation begins, add the app stack, package manager, environment variables, and run commands here.
+Run a local static server:
+
+```bash
+python -m http.server 4173
+```
+
+Then open:
+
+```text
+http://localhost:4173
+```
+
+The deployed app expects Supabase to have the included migrations applied.
 
 ## Guiding Principles
 

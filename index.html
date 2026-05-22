@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>TRNAWL</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js" defer></script>
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <div id="authView" class="auth-view">
+      <section class="auth-panel">
+        <div class="brand-mark">TRNAWL</div>
+        <h1>Operational accountability for delivery work</h1>
+        <p>Track SOWs, delivery reviews, blockers, customer actions, and repeatable workflows from one lightweight board.</p>
+
+        <form id="authForm" class="auth-form">
+          <label>
+            Email
+            <input id="authEmail" type="email" autocomplete="email" required />
+          </label>
+          <label>
+            Password
+            <input id="authPassword" type="password" autocomplete="current-password" required />
+          </label>
+          <div class="auth-actions">
+            <button class="primary-button" type="submit">Sign in</button>
+            <button class="secondary-button" type="button" id="signUpButton">Create account</button>
+          </div>
+          <p id="authMessage" class="form-message"></p>
+        </form>
+      </section>
+    </div>
+
+    <div id="appView" class="app-shell hidden">
+      <aside class="sidebar">
+        <div class="sidebar-brand">
+          <span class="brand-rail"></span>
+          <div>
+            <strong>TRNAWL</strong>
+            <span>Execution visibility</span>
+          </div>
+        </div>
+
+        <nav class="nav-list" aria-label="Main navigation">
+          <button class="nav-item active" data-view="dashboard"><i data-lucide="layout-dashboard"></i><span>Dashboard</span></button>
+          <button class="nav-item" data-view="tickets"><i data-lucide="kanban-square"></i><span>Tickets</span></button>
+          <button class="nav-item" data-view="workflows"><i data-lucide="workflow"></i><span>Workflows</span></button>
+          <button class="nav-item" data-view="actions"><i data-lucide="clipboard-check"></i><span>Customer Actions</span></button>
+          <button class="nav-item" data-view="calendar"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
+          <button class="nav-item" data-view="reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></button>
+          <button class="nav-item" data-view="admin"><i data-lucide="settings"></i><span>Admin</span></button>
+        </nav>
+      </aside>
+
+      <main class="main-shell">
+        <header class="topbar">
+          <div>
+            <h1 id="viewTitle">Dashboard</h1>
+            <p id="viewSubtitle">Operational health, blockers, and work needing attention.</p>
+          </div>
+          <div class="topbar-actions">
+            <span id="syncStatus" class="sync-status">Ready</span>
+            <button id="refreshButton" class="icon-button" type="button" title="Refresh"><i data-lucide="refresh-cw"></i></button>
+            <button id="newTicketButton" class="primary-button" type="button"><i data-lucide="plus"></i><span>Ticket</span></button>
+            <button id="signOutButton" class="secondary-button" type="button">Sign out</button>
+          </div>
+        </header>
+
+        <section id="dashboardView" class="view active"></section>
+        <section id="ticketsView" class="view"></section>
+        <section id="workflowsView" class="view"></section>
+        <section id="actionsView" class="view"></section>
+        <section id="calendarView" class="view"></section>
+        <section id="reportsView" class="view"></section>
+        <section id="adminView" class="view"></section>
+      </main>
+    </div>
+
+    <dialog id="ticketDialog" class="modal">
+      <form id="ticketForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Create Ticket</h2>
+            <p>Capture the operational ask with owner, date, blocker, and readiness context.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label class="span-2">Title<input id="ticketTitle" required /></label>
+          <label class="span-2">Description<textarea id="ticketDescription" rows="4"></textarea></label>
+          <label>Type<select id="ticketType"></select></label>
+          <label>Priority<select id="ticketPriority"></select></label>
+          <label>Owner<input id="ticketOwner" placeholder="Delivery, Pricing, Thomas" /></label>
+          <label>Customer<input id="ticketCustomer" placeholder="Customer name" /></label>
+          <label>Due date<input id="ticketDueDate" type="date" /></label>
+          <label>Blocked reason<select id="ticketBlockedReason"></select></label>
+        </div>
+        <fieldset class="readiness-fieldset">
+          <legend>Readiness checks</legend>
+          <label><input type="checkbox" name="readiness" value="delivery_reviewed" /> Delivery reviewed</label>
+          <label><input type="checkbox" name="readiness" value="pricing_reviewed" /> Pricing reviewed</label>
+          <label><input type="checkbox" name="readiness" value="scope_clear" /> Scope clear</label>
+          <label><input type="checkbox" name="readiness" value="owner_assigned" /> Owner assigned</label>
+          <label><input type="checkbox" name="readiness" value="customer_dependencies_listed" /> Customer dependencies listed</label>
+          <label><input type="checkbox" name="readiness" value="dates_realistic" /> Dates realistic</label>
+        </fieldset>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Create</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="workflowDialog" class="modal">
+      <form id="workflowForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Start New SOW Workflow</h2>
+            <p>Creates the minimum review tasks for an operationally ready SOW.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label>Customer<input id="workflowCustomer" required /></label>
+          <label>Opportunity reference<input id="workflowOpportunity" placeholder="Optional" /></label>
+          <label>Primary owner<input id="workflowOwner" placeholder="Owner or team" /></label>
+          <label>First due date<input id="workflowDueDate" type="date" /></label>
+        </div>
+        <div id="workflowPreview" class="preview-list"></div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Create Workflow</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="actionDialog" class="modal">
+      <form id="actionForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Add Customer Action</h2>
+            <p>Track external dependencies with an internal accountable owner.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label>Customer<input id="actionCustomer" required /></label>
+          <label>Customer owner<input id="actionCustomerOwner" /></label>
+          <label class="span-2">Action<input id="actionText" required /></label>
+          <label>Due date<input id="actionDueDate" type="date" /></label>
+          <label>Status<select id="actionStatus"></select></label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Add Action</button>
+        </div>
+      </form>
+    </dialog>
+  </body>
+</html>
