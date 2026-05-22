@@ -81,6 +81,18 @@ const developmentLog = [
     ],
     notes: ["Kept the app static and lightweight while making it feel less basic."],
   },
+  {
+    date: "2026-05-22",
+    title: "Sales Lead added",
+    summary: "Added a dedicated Sales Lead responsibility to tickets and workflows.",
+    changes: [
+      "Added Sales Lead select to the ticket form.",
+      "Added Sales Lead select to the New SOW workflow starter.",
+      "Seeded Harry Dumm and Lloyd Duemmer as demo sales people.",
+      "Stored Sales Lead as a ticket reference and display name.",
+    ],
+    notes: ["Delivery Lead, Sales Lead, and Opportunity Lead are now separate responsibilities."],
+  },
 ];
 
 const ticketTypes = [
@@ -315,11 +327,14 @@ function syncObjectSelects() {
   const personOptions = state.people.map((person) => [person.id, `${person.display_name} - ${person.role_label}`]);
   const customerOptions = state.customers.map((customer) => [customer.id, customer.name]);
   const currentUser = state.people.find((person) => person.is_current_user) || state.people[0];
+  const fallbackSalesLead = state.people.find((person) => person.display_name === "Harry Dumm") || state.people.find((person) => person.role_label.includes("Sales")) || state.people[0];
   const fallbackOpportunityLead = state.people.find((person) => person.display_name === "Lola Bunny") || state.people[1] || currentUser;
 
   fillSelect($("#ticketDeliveryLead"), personOptions, currentUser?.id || "");
+  fillSelect($("#ticketSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#ticketOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
   fillSelect($("#workflowDeliveryLead"), personOptions, currentUser?.id || "");
+  fillSelect($("#workflowSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#workflowOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
   fillSelect($("#ticketCustomer"), customerOptions, state.customers[0]?.id || "");
   fillSelect($("#workflowCustomer"), customerOptions, state.customers[0]?.id || "");
@@ -420,7 +435,7 @@ function renderTickets() {
   const stages = state.stages.filter((stage) => stage.stage_type === "ticket");
   const filtered = state.tickets.filter((ticket) => {
     const search = state.search.toLowerCase();
-    const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.owner_name, ticket.requester_name].filter(Boolean).join(" ").toLowerCase().includes(search);
+    const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.owner_name, ticket.sales_lead_name, ticket.requester_name].filter(Boolean).join(" ").toLowerCase().includes(search);
     const matchesType = state.typeFilter === "all" || ticket.ticket_type === state.typeFilter;
     return matchesSearch && matchesType;
   });
@@ -525,6 +540,7 @@ async function createTicket(event) {
   const readinessScore = Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
   const deliveryLead = findById(state.people, $("#ticketDeliveryLead").value);
+  const salesLead = findById(state.people, $("#ticketSalesLead").value);
   const opportunityLead = findById(state.people, $("#ticketOpportunityLead").value);
   const customer = findById(state.customers, $("#ticketCustomer").value);
   const body = {
@@ -533,6 +549,8 @@ async function createTicket(event) {
     ticket_type: $("#ticketType").value,
     priority: $("#ticketPriority").value,
     delivery_lead_id: deliveryLead?.id || null,
+    sales_lead_id: salesLead?.id || null,
+    sales_lead_name: salesLead?.display_name || null,
     opportunity_lead_id: opportunityLead?.id || null,
     customer_id: customer?.id || null,
     owner_name: deliveryLead?.display_name || null,
@@ -597,6 +615,7 @@ async function startWorkflow(event) {
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
   const customer = findById(state.customers, $("#workflowCustomer").value);
   const deliveryLead = findById(state.people, $("#workflowDeliveryLead").value);
+  const salesLead = findById(state.people, $("#workflowSalesLead").value);
   const opportunityLead = findById(state.people, $("#workflowOpportunityLead").value);
   const baseDate = $("#workflowDueDate").value ? new Date(`${$("#workflowDueDate").value}T00:00:00`) : new Date();
 
@@ -628,6 +647,8 @@ async function startWorkflow(event) {
           customer_id: customer?.id || null,
           customer_name: customer?.name || null,
           delivery_lead_id: deliveryLead?.id || null,
+          sales_lead_id: salesLead?.id || null,
+          sales_lead_name: salesLead?.display_name || null,
           opportunity_lead_id: opportunityLead?.id || null,
           owner_name: deliveryLead?.display_name || null,
           requester_name: opportunityLead?.display_name || state.user.email,

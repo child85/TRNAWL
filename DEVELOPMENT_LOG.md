@@ -47,3 +47,15 @@ Changed:
 - Added a branded top accent bar and stronger sidebar identity.
 - Improved dashboard cards, ticket cards, tables, modals, and navigation styling.
 - Kept the app lightweight and static while making it feel less like a basic HTML prototype.
+
+### Sales Lead Added
+
+Added a dedicated sales responsibility to tickets and workflows.
+
+Changed:
+
+- Added Sales Lead to the ticket form.
+- Added Sales Lead to the New SOW workflow starter.
+- Added two demo sales people: Harry Dumm and Lloyd Duemmer.
+- Stored Sales Lead as a ticket reference and display name.
+- Kept Delivery Lead, Sales Lead, and Opportunity Lead as separate responsibility fields.
