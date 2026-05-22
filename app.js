@@ -10,6 +10,8 @@ const state = {
   templates: [],
   templateTasks: [],
   customerActions: [],
+  people: [],
+  customers: [],
   search: "",
   typeFilter: "all",
 };
@@ -54,6 +56,19 @@ const developmentLog = [
     ],
     notes: ["Keep future entries short and outcome-focused."],
   },
+  {
+    date: "2026-05-22",
+    title: "Ticket form responsibility cleanup",
+    summary: "Changed ticket creation to use demo people and customers instead of free text.",
+    changes: [
+      "Preselected Thomas as Delivery Lead.",
+      "Added five demo people with Looney Tunes names.",
+      "Added three demo customers with playful company names.",
+      "Renamed responsibility fields to Delivery Lead and Opportunity Lead.",
+      "Removed pricing, delivery-reviewed, and owner-assigned readiness checks.",
+    ],
+    notes: ["Ticket responsibility is now object-based instead of free text."],
+  },
 ];
 
 const ticketTypes = [
@@ -92,12 +107,12 @@ const actionStatuses = [
 ];
 
 const readinessKeys = [
-  "delivery_reviewed",
-  "pricing_reviewed",
   "scope_clear",
-  "owner_assigned",
   "customer_dependencies_listed",
   "dates_realistic",
+  "success_criteria_clear",
+  "delivery_capacity_realistic",
+  "handoff_plan_clear",
 ];
 
 const $ = (selector) => document.querySelector(selector);
@@ -260,23 +275,43 @@ async function loadData() {
   if (!state.session) return;
   setSync("Syncing");
   try {
-    const [stages, tickets, templates, templateTasks, customerActions] = await Promise.all([
+    const [stages, tickets, templates, templateTasks, customerActions, people, customers] = await Promise.all([
       api("/workflow_stages?select=*&order=stage_type.asc,position.asc"),
       api("/tickets?select=*&order=created_at.desc"),
       api("/workflow_templates?select=*&order=name.asc"),
       api("/workflow_template_tasks?select=*&order=position.asc"),
       api("/customer_actions?select=*&order=created_at.desc"),
+      api("/app_people?select=*&order=is_current_user.desc,display_name.asc"),
+      api("/customers?select=*&order=name.asc"),
     ]);
     state.stages = stages;
     state.tickets = tickets;
     state.templates = templates;
     state.templateTasks = templateTasks;
     state.customerActions = customerActions;
+    state.people = people;
+    state.customers = customers;
+    syncObjectSelects();
     renderAll();
     setSync("Ready");
   } catch (error) {
     setSync(error.message);
   }
+}
+
+function syncObjectSelects() {
+  const personOptions = state.people.map((person) => [person.id, `${person.display_name} - ${person.role_label}`]);
+  const customerOptions = state.customers.map((customer) => [customer.id, customer.name]);
+  const currentUser = state.people.find((person) => person.is_current_user) || state.people[0];
+  const fallbackOpportunityLead = state.people.find((person) => person.display_name === "Lola Bunny") || state.people[1] || currentUser;
+
+  fillSelect($("#ticketDeliveryLead"), personOptions, currentUser?.id || "");
+  fillSelect($("#ticketOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
+  fillSelect($("#workflowDeliveryLead"), personOptions, currentUser?.id || "");
+  fillSelect($("#workflowOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
+  fillSelect($("#ticketCustomer"), customerOptions, state.customers[0]?.id || "");
+  fillSelect($("#workflowCustomer"), customerOptions, state.customers[0]?.id || "");
+  fillSelect($("#actionCustomer"), customerOptions, state.customers[0]?.id || "");
 }
 
 function setSync(message) {
@@ -346,7 +381,7 @@ function ticketTable(tickets) {
   return `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Ticket</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
+        <thead><tr><th>Ticket</th><th>Delivery Lead</th><th>Due</th><th>Status</th></tr></thead>
         <tbody>
           ${tickets.map((ticket) => `
             <tr>
@@ -373,7 +408,7 @@ function renderTickets() {
   const stages = state.stages.filter((stage) => stage.stage_type === "ticket");
   const filtered = state.tickets.filter((ticket) => {
     const search = state.search.toLowerCase();
-    const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.owner_name].filter(Boolean).join(" ").toLowerCase().includes(search);
+    const matchesSearch = !search || [ticket.title, ticket.description, ticket.customer_name, ticket.owner_name, ticket.requester_name].filter(Boolean).join(" ").toLowerCase().includes(search);
     const matchesType = state.typeFilter === "all" || ticket.ticket_type === state.typeFilter;
     return matchesSearch && matchesType;
   });
@@ -423,7 +458,7 @@ function ticketCard(ticket) {
       <div class="tag-row">
         <span class="pill primary">${labelFor(ticketTypes, ticket.ticket_type)}</span>
         ${ticketPills(ticket)}
-        <span class="pill">${escapeHtml(ticket.owner_name || "Unassigned")}</span>
+        <span class="pill">${escapeHtml(ticket.owner_name || "No delivery lead")}</span>
       </div>
     </article>
   `;
@@ -477,13 +512,20 @@ async function createTicket(event) {
   const readiness = Object.fromEntries(readinessKeys.map((key) => [key, Boolean($(`input[name="readiness"][value="${key}"]`).checked)]));
   const readinessScore = Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
+  const deliveryLead = findById(state.people, $("#ticketDeliveryLead").value);
+  const opportunityLead = findById(state.people, $("#ticketOpportunityLead").value);
+  const customer = findById(state.customers, $("#ticketCustomer").value);
   const body = {
     title: $("#ticketTitle").value.trim(),
     description: $("#ticketDescription").value.trim() || null,
     ticket_type: $("#ticketType").value,
     priority: $("#ticketPriority").value,
-    owner_name: $("#ticketOwner").value.trim() || null,
-    customer_name: $("#ticketCustomer").value.trim() || null,
+    delivery_lead_id: deliveryLead?.id || null,
+    opportunity_lead_id: opportunityLead?.id || null,
+    customer_id: customer?.id || null,
+    owner_name: deliveryLead?.display_name || null,
+    requester_name: opportunityLead?.display_name || state.user.email,
+    customer_name: customer?.name || null,
     due_date: $("#ticketDueDate").value || null,
     blocked_reason: $("#ticketBlockedReason").value || null,
     blocked_since: $("#ticketBlockedReason").value ? new Date().toISOString() : null,
@@ -491,7 +533,6 @@ async function createTicket(event) {
     readiness_score: readinessScore,
     status_stage_id: newStage?.id || null,
     requester_id: state.user.id,
-    requester_name: state.user.email,
   };
 
   try {
@@ -542,8 +583,9 @@ async function startWorkflow(event) {
   if (!template) return;
   const tasks = state.templateTasks.filter((task) => task.template_id === template.id);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
-  const customer = $("#workflowCustomer").value.trim();
-  const owner = $("#workflowOwner").value.trim();
+  const customer = findById(state.customers, $("#workflowCustomer").value);
+  const deliveryLead = findById(state.people, $("#workflowDeliveryLead").value);
+  const opportunityLead = findById(state.people, $("#workflowOpportunityLead").value);
   const baseDate = $("#workflowDueDate").value ? new Date(`${$("#workflowDueDate").value}T00:00:00`) : new Date();
 
   try {
@@ -552,8 +594,8 @@ async function startWorkflow(event) {
       method: "POST",
       body: {
         template_id: template.id,
-        name: `${customer} New SOW Workflow`,
-        customer_name: customer,
+        name: `${customer?.name || "Customer"} New SOW Workflow`,
+        customer_name: customer?.name || null,
         opportunity_reference: $("#workflowOpportunity").value.trim() || null,
         started_by: state.user.id,
       },
@@ -565,14 +607,18 @@ async function startWorkflow(event) {
       const [ticket] = await api("/tickets", {
         method: "POST",
         body: {
-          title: `${customer}: ${task.title}`,
+          title: `${customer?.name || "Customer"}: ${task.title}`,
           description: task.description,
           ticket_type: task.default_ticket_type,
           priority: task.default_priority,
           blocked_reason: task.default_blocked_reason,
           blocked_since: task.default_blocked_reason ? new Date().toISOString() : null,
-          customer_name: customer,
-          owner_name: owner || null,
+          customer_id: customer?.id || null,
+          customer_name: customer?.name || null,
+          delivery_lead_id: deliveryLead?.id || null,
+          opportunity_lead_id: opportunityLead?.id || null,
+          owner_name: deliveryLead?.display_name || null,
+          requester_name: opportunityLead?.display_name || state.user.email,
           due_date: dueDate.toISOString().slice(0, 10),
           status_stage_id: newStage?.id || null,
           requester_id: state.user.id,
@@ -631,7 +677,7 @@ async function createCustomerAction(event) {
     await api("/customer_actions", {
       method: "POST",
       body: {
-        customer_name: $("#actionCustomer").value.trim(),
+        customer_name: findById(state.customers, $("#actionCustomer").value)?.name || null,
         customer_owner: $("#actionCustomerOwner").value.trim() || null,
         action: $("#actionText").value.trim(),
         due_date: $("#actionDueDate").value || null,
@@ -747,6 +793,10 @@ function countBy(items, key) {
 
 function labelFor(options, value) {
   return options.find(([optionValue]) => optionValue === value)?.[1] || value || "";
+}
+
+function findById(items, id) {
+  return items.find((item) => item.id === id);
 }
 
 function daysUntil(dateString) {

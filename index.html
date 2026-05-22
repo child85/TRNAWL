@@ -85,7 +85,7 @@
         <div class="modal-header">
           <div>
             <h2>Create Ticket</h2>
-            <p>Capture the operational ask with owner, date, blocker, and readiness context.</p>
+            <p>Capture the operational ask with clear delivery responsibility, customer context, and readiness checks.</p>
           </div>
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
@@ -94,19 +94,20 @@
           <label class="span-2">Description<textarea id="ticketDescription" rows="4"></textarea></label>
           <label>Type<select id="ticketType"></select></label>
           <label>Priority<select id="ticketPriority"></select></label>
-          <label>Owner<input id="ticketOwner" placeholder="Delivery, Pricing, Thomas" /></label>
-          <label>Customer<input id="ticketCustomer" placeholder="Customer name" /></label>
+          <label>Delivery Lead<select id="ticketDeliveryLead"></select></label>
+          <label>Opportunity Lead<select id="ticketOpportunityLead"></select></label>
+          <label>Customer<select id="ticketCustomer"></select></label>
           <label>Due date<input id="ticketDueDate" type="date" /></label>
           <label>Blocked reason<select id="ticketBlockedReason"></select></label>
         </div>
         <fieldset class="readiness-fieldset">
           <legend>Readiness checks</legend>
-          <label><input type="checkbox" name="readiness" value="delivery_reviewed" /> Delivery reviewed</label>
-          <label><input type="checkbox" name="readiness" value="pricing_reviewed" /> Pricing reviewed</label>
           <label><input type="checkbox" name="readiness" value="scope_clear" /> Scope clear</label>
-          <label><input type="checkbox" name="readiness" value="owner_assigned" /> Owner assigned</label>
           <label><input type="checkbox" name="readiness" value="customer_dependencies_listed" /> Customer dependencies listed</label>
           <label><input type="checkbox" name="readiness" value="dates_realistic" /> Dates realistic</label>
+          <label><input type="checkbox" name="readiness" value="success_criteria_clear" /> Success criteria clear</label>
+          <label><input type="checkbox" name="readiness" value="delivery_capacity_realistic" /> Delivery capacity realistic</label>
+          <label><input type="checkbox" name="readiness" value="handoff_plan_clear" /> Handoff plan clear</label>
         </fieldset>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
@@ -125,9 +126,10 @@
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="form-grid">
-          <label>Customer<input id="workflowCustomer" required /></label>
+          <label>Customer<select id="workflowCustomer" required></select></label>
           <label>Opportunity reference<input id="workflowOpportunity" placeholder="Optional" /></label>
-          <label>Primary owner<input id="workflowOwner" placeholder="Owner or team" /></label>
+          <label>Delivery Lead<select id="workflowDeliveryLead"></select></label>
+          <label>Opportunity Lead<select id="workflowOpportunityLead"></select></label>
           <label>First due date<input id="workflowDueDate" type="date" /></label>
         </div>
         <div id="workflowPreview" class="preview-list"></div>
@@ -148,7 +150,7 @@
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="form-grid">
-          <label>Customer<input id="actionCustomer" required /></label>
+          <label>Customer<select id="actionCustomer" required></select></label>
           <label>Customer owner<input id="actionCustomerOwner" /></label>
           <label class="span-2">Action<input id="actionText" required /></label>
           <label>Due date<input id="actionDueDate" type="date" /></label>

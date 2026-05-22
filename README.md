@@ -149,7 +149,8 @@ Included now:
 - Supabase email/password authentication
 - Dashboard with open, overdue, blocked, and customer-action counts
 - Drag-and-drop ticket board
-- Ticket creation with owner, customer, due date, priority, blocked reason, and readiness checks
+- Ticket creation with Delivery Lead, Opportunity Lead, customer, due date, priority, blocked reason, and readiness checks
+- Selectable demo people and customers for ticket creation
 - Workflow template view
 - New SOW Workflow starter that creates review tickets
 - Customer action register

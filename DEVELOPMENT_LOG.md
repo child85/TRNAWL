@@ -21,3 +21,17 @@ Notes:
 
 - AI is intentionally excluded from this MVP.
 - Supabase email confirmation is currently enabled, so users must confirm email before sign-in unless that setting is changed.
+
+### Ticket Form Responsibility Cleanup
+
+Changed the first ticket flow to use selectable demo objects instead of free text.
+
+Changed:
+
+- Added Thomas as the default Delivery Lead.
+- Added five demo people: Bugs Bunny, Daffy Duck, Lola Bunny, Porky Pig, and Wile E. Coyote.
+- Added three demo customers: Acme Anvils Ltd., ToonTown Telecom, and Roadrunner Logistics.
+- Replaced free-text owner/customer fields with selects.
+- Renamed responsibility fields to Delivery Lead and Opportunity Lead.
+- Removed pricing and delivery-reviewed readiness checks.
+- Removed owner-assigned readiness check because assignment happens when the ticket is created.
