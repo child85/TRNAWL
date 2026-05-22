@@ -42,7 +42,7 @@ Restyled the MVP to feel closer to a modern corporate assurance platform.
 
 Changed:
 
-- Reworked the color system around a crisp business blue, white surfaces, and a restrained yellow accent.
+- Reworked the color system around a crisp business blue, white surfaces, and restrained service accents.
 - Replaced rounded prototype styling with sharper rectangular panels and controls.
 - Added a branded top accent bar and stronger sidebar identity.
 - Improved dashboard cards, ticket cards, tables, modals, and navigation styling.
@@ -115,3 +115,15 @@ Changed:
 - Reworked Calendar back into a capacity board with a Team list.
 - Added role and name filters for the Calendar team list.
 - Added drag-and-drop people reservations on Calendar days.
+
+### TUV-Style Color Refinement
+
+Moved the app closer to a clean blue-white corporate assurance style.
+
+Changed:
+
+- Removed warm yellow accenting.
+- Replaced the top accent and brand rail with blue-to-cyan treatment.
+- Reduced heavy shadows on panels, cards, and toolbar areas.
+- Shifted warning and priority states away from yellow.
+- Updated demo user colors to a cooler business palette.

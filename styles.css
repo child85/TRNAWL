@@ -1,23 +1,23 @@
 :root {
-  --bg: #f2f5f8;
+  --bg: #f3f6f9;
   --surface: #ffffff;
-  --surface-soft: #f7f9fb;
-  --text: #101820;
-  --muted: #65707a;
-  --line: #d9e1e8;
-  --primary: #005aa0;
-  --primary-strong: #003f73;
-  --primary-soft: #e6f2fb;
-  --accent: #f2a900;
-  --accent-soft: #fff4d8;
-  --navy: #162f4f;
-  --warning: #9b6700;
-  --warning-soft: #fff2cc;
+  --surface-soft: #f8fafc;
+  --text: #0f172a;
+  --muted: #536273;
+  --line: #dce5ef;
+  --primary: #0067b1;
+  --primary-strong: #003a70;
+  --primary-soft: #e8f3ff;
+  --accent: #0097d7;
+  --accent-soft: #e7f7fc;
+  --navy: #002b55;
+  --warning: #005a96;
+  --warning-soft: #e6f3fb;
   --danger: #c7352f;
   --danger-soft: #fde7e7;
-  --success: #168447;
-  --success-soft: #e5f4e8;
-  --shadow: 0 18px 42px rgba(15, 42, 71, 0.13);
+  --success: #007a53;
+  --success-soft: #e4f4ef;
+  --shadow: 0 12px 30px rgba(0, 43, 85, 0.09);
   color-scheme: light;
 }
 
@@ -40,7 +40,7 @@ body::before {
   position: fixed;
   inset: 0 0 auto;
   height: 5px;
-  background: linear-gradient(90deg, var(--primary) 0 72%, var(--accent) 72% 100%);
+  background: linear-gradient(90deg, var(--primary-strong) 0, var(--primary) 62%, var(--accent) 100%);
   z-index: 20;
 }
 
@@ -65,7 +65,7 @@ button {
   place-items: center;
   padding: 24px;
   background:
-    linear-gradient(90deg, rgba(0, 90, 160, 0.95) 0 38%, transparent 38%),
+    linear-gradient(90deg, rgba(0, 58, 112, 0.96) 0 38%, transparent 38%),
     linear-gradient(180deg, #ffffff, var(--bg));
 }
 
@@ -171,7 +171,7 @@ textarea:focus {
 .primary-button {
   background: var(--primary);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 90, 160, 0.22);
+  box-shadow: 0 4px 12px rgba(0, 103, 177, 0.2);
 }
 
 .primary-button:hover {
@@ -224,7 +224,7 @@ textarea:focus {
   position: sticky;
   top: 0;
   height: 100vh;
-  box-shadow: 10px 0 30px rgba(15, 42, 71, 0.04);
+  box-shadow: 8px 0 24px rgba(0, 43, 85, 0.035);
 }
 
 .sidebar-brand {
@@ -239,7 +239,7 @@ textarea:focus {
   width: 8px;
   height: 42px;
   border-radius: 0;
-  background: linear-gradient(180deg, var(--primary) 0 72%, var(--accent) 72% 100%);
+  background: linear-gradient(180deg, var(--primary-strong) 0, var(--primary) 58%, var(--accent) 100%);
 }
 
 .sidebar-brand strong {
@@ -278,7 +278,7 @@ textarea:focus {
 .nav-item:hover {
   color: var(--primary-strong);
   background: var(--primary-soft);
-  border-color: #bfdaed;
+  border-color: #b8d6ee;
 }
 
 .main-shell {
@@ -295,7 +295,7 @@ textarea:focus {
   padding: 22px 28px 20px;
   background: #ffffff;
   border-bottom: 1px solid var(--line);
-  box-shadow: 0 8px 24px rgba(15, 42, 71, 0.05);
+  box-shadow: 0 6px 18px rgba(0, 43, 85, 0.04);
 }
 
 .topbar h1 {
@@ -348,7 +348,7 @@ textarea:focus {
   border-radius: 3px;
   padding: 18px;
   border-top: 4px solid var(--primary);
-  box-shadow: 0 10px 25px rgba(15, 42, 71, 0.06);
+  box-shadow: 0 8px 18px rgba(0, 43, 85, 0.045);
 }
 
 .metric strong {
@@ -375,7 +375,7 @@ textarea:focus {
   border-radius: 3px;
   padding: 20px;
   min-width: 0;
-  box-shadow: 0 10px 25px rgba(15, 42, 71, 0.05);
+  box-shadow: 0 8px 18px rgba(0, 43, 85, 0.04);
 }
 
 .panel h2 {
@@ -420,7 +420,7 @@ th {
 
 .board-column {
   min-height: 520px;
-  background: #edf3f8;
+  background: #eef4f9;
   border: 1px solid var(--line);
   border-radius: 3px;
   padding: 12px;
@@ -444,7 +444,7 @@ th {
   border: 1px solid var(--line);
   border-radius: 3px;
   padding: 13px;
-  box-shadow: 0 8px 18px rgba(15, 42, 71, 0.05);
+  box-shadow: 0 6px 14px rgba(0, 43, 85, 0.045);
 }
 
 .ticket-card {
@@ -506,7 +506,7 @@ th {
 .pill.warning {
   color: var(--warning);
   background: var(--warning-soft);
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--primary);
 }
 
 .pill.success {
@@ -723,7 +723,7 @@ th {
   border: 0;
   border-left: 4px solid var(--person-color);
   border-radius: 14px;
-  background: color-mix(in srgb, var(--person-color) 16%, white);
+  background: color-mix(in srgb, var(--person-color) 12%, white);
   color: var(--navy);
   padding: 8px 9px;
   text-align: left;

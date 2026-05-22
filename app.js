@@ -82,7 +82,7 @@ const developmentLog = [
     title: "Corporate design refresh",
     summary: "Restyled the MVP toward a modern corporate assurance platform.",
     changes: [
-      "Reworked the color system around business blue, white surfaces, and restrained yellow accents.",
+      "Reworked the color system around business blue, white surfaces, and restrained service accents.",
       "Replaced rounded prototype styling with sharper rectangular panels and controls.",
       "Added a branded top accent bar and stronger sidebar identity.",
       "Improved dashboard cards, ticket cards, tables, modals, and navigation.",
@@ -155,6 +155,18 @@ const developmentLog = [
       "Added role and name filters for the calendar team list.",
     ],
     notes: ["Calendar reservations are saved locally in the browser for this MVP."],
+  },
+  {
+    date: "2026-05-22",
+    title: "TUV-style color refinement",
+    summary: "Removed warm yellow accents and moved the UI closer to a blue-white assurance service style.",
+    changes: [
+      "Replaced yellow accenting with blue and cyan brand accents.",
+      "Reduced heavy shadows for cleaner corporate surfaces.",
+      "Updated warning and priority styling away from yellow.",
+      "Updated demo user colors to stay in a cooler business palette.",
+    ],
+    notes: ["The design now leans more toward clean TÜV-style blue, white, and light gray."],
   },
 ];
 
@@ -1402,7 +1414,7 @@ function calendarCapacityDay(date) {
 
 function teamPersonCard(person) {
   return `
-    <article class="team-person-card" draggable="true" data-person-id="${person.id}" style="--person-color: ${escapeHtml(person.color || "#235c51")}">
+    <article class="team-person-card" draggable="true" data-person-id="${person.id}" style="--person-color: ${escapeHtml(person.color || "#0067b1")}">
       <span class="avatar-dot">${escapeHtml(initials(person.display_name))}</span>
       <div>
         <strong>${escapeHtml(person.display_name)}</strong>
@@ -1423,7 +1435,7 @@ function calendarTicketChip(ticket) {
 
 function calendarReservationChip(reservation) {
   return `
-    <span class="capacity-chip reservation-chip" style="--person-color: ${escapeHtml(reservation.color || "#235c51")}">
+    <span class="capacity-chip reservation-chip" style="--person-color: ${escapeHtml(reservation.color || "#0067b1")}">
       ${escapeHtml(reservation.personName)}
     </span>
   `;
@@ -1540,7 +1552,7 @@ function renderAdmin() {
                   <td>${escapeHtml(person.display_name)}</td>
                   <td>${escapeHtml(person.role_label)}</td>
                   <td>${escapeHtml(person.manager_name || "None")}</td>
-                  <td><span class="color-chip" style="--person-color: ${escapeHtml(person.color || "#235c51")}"></span></td>
+                  <td><span class="color-chip" style="--person-color: ${escapeHtml(person.color || "#0067b1")}"></span></td>
                   <td>${person.is_current_user ? `<span class="pill primary">Default user</span>` : `<span class="pill">Demo user</span>`}</td>
                 </tr>
               `).join("")}
@@ -1573,7 +1585,7 @@ function getCurrentPerson() {
 }
 
 function colorForPersonName(name) {
-  return state.people.find((person) => person.display_name === name)?.color || "#235c51";
+  return state.people.find((person) => person.display_name === name)?.color || "#0067b1";
 }
 
 function initials(name) {
