@@ -550,6 +550,25 @@ th {
   max-width: 240px;
 }
 
+.ticket-toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+}
+
+.ticket-filter-row {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(160px, 240px) minmax(160px, 240px);
+  gap: 10px;
+  min-width: 0;
+}
+
+.ticket-filter-row input,
+.ticket-filter-row select {
+  max-width: none;
+}
+
 .template-grid,
 .actions-grid,
 .calendar-grid,
@@ -1366,6 +1385,11 @@ th {
   .topbar,
   .toolbar {
     display: grid;
+  }
+
+  .ticket-toolbar,
+  .ticket-filter-row {
+    grid-template-columns: 1fr;
   }
 
   .metric-grid,

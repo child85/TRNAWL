@@ -306,6 +306,17 @@ const developmentLog = [
     ],
     notes: ["Users here are TRNAWL app people, not Supabase login accounts."],
   },
+  {
+    date: "2026-05-22",
+    title: "Ticket filter alignment",
+    summary: "Kept the ticket search, type filter, and owner filter on one clean row.",
+    changes: [
+      "Added a dedicated ticket toolbar layout.",
+      "Kept filters aligned in one row on desktop.",
+      "Preserved mobile wrapping for narrow screens.",
+    ],
+    notes: ["This is a visual cleanup only."],
+  },
 ];
 
 const ticketTypes = [
@@ -900,8 +911,8 @@ function renderTickets() {
   ];
 
   $("#ticketsView").innerHTML = `
-    <div class="toolbar">
-      <div class="auth-actions">
+    <div class="toolbar ticket-toolbar">
+      <div class="ticket-filter-row">
         <input id="ticketSearch" placeholder="Search tickets, owners, customers" value="${escapeHtml(state.search)}" />
         <select id="typeFilter">
           <option value="all">All types</option>

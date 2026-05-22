@@ -253,3 +253,13 @@ Changed:
 - Added a Create User button to Admin.
 - Added a user creation dialog with name, role, manager, and color.
 - New users are saved to the people table and immediately appear in owner, lead, and calendar selections.
+
+### Ticket Filter Alignment
+
+Kept the ticket search, type filter, and owner filter on one clean row.
+
+Changed:
+
+- Added a dedicated ticket toolbar layout.
+- Kept filters aligned in one row on desktop.
+- Preserved mobile wrapping for narrow screens.
