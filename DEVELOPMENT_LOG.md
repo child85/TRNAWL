@@ -86,3 +86,17 @@ Changed:
 - Defaulted new ticket due dates to two days from today.
 - Added ticket details from the ticket board with status update.
 - Added an initial status selector when creating tickets.
+
+### Ticket Editing and Calendar Planning
+
+Expanded operational editing and planning behavior.
+
+Changed:
+
+- Added manager and color metadata to demo users.
+- Added Sales Lead defaults to customer records.
+- Preselected Delivery Lead from the current user's manager.
+- Preselected Sales Lead from the selected customer.
+- Expanded ticket details into an editable work item view.
+- Added ticket updates/notes.
+- Changed Calendar into user lanes with colored assignments and drag/drop planning.

@@ -10,6 +10,7 @@ const state = {
   templates: [],
   templateTasks: [],
   customerActions: [],
+  ticketComments: [],
   people: [],
   customers: [],
   selectedCustomerId: null,
@@ -122,6 +123,20 @@ const developmentLog = [
       "Added ticket detail opening from the board with status update.",
     ],
     notes: ["Owner remains the person actually working the ticket."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Ticket editing and calendar planning",
+    summary: "Expanded ticket details into an editable working view and added people-based calendar planning.",
+    changes: [
+      "Added manager and color metadata for demo users.",
+      "Added customer-level Sales Lead defaults.",
+      "Preselected Delivery Lead from the current user's manager.",
+      "Preselected Sales Lead from the selected customer.",
+      "Added editable ticket detail fields, readiness changes, and updates.",
+      "Changed Calendar into user lanes with draggable ticket assignment by person and due date.",
+    ],
+    notes: ["Ticket details now work more like an operational work item than a read-only preview."],
   },
 ];
 
@@ -245,8 +260,14 @@ function bindEvents() {
   $("#ticketForm").addEventListener("submit", createTicket);
   $("#ticketType").addEventListener("change", applyTicketTypeRules);
   $("#ticketDetailForm").addEventListener("submit", updateTicketDetails);
+  $("#ticketCustomer").addEventListener("change", applyCustomerDefaults);
+  $("#ticketDetailType").addEventListener("change", applyTicketDetailRules);
+  $("#ticketDetailCustomer").addEventListener("change", () => applyTicketDetailCustomerDefaults(true));
+  $("#addTicketCommentButton").addEventListener("click", addTicketComment);
   $("#workflowForm").addEventListener("submit", startWorkflow);
+  $("#workflowCustomer").addEventListener("change", applyWorkflowCustomerDefaults);
   $("#customerForm").addEventListener("submit", createCustomer);
+  $("#customerEditForm").addEventListener("submit", updateCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
 
   $$(".close-dialog").forEach((button) => {
@@ -259,6 +280,7 @@ function bindEvents() {
 }
 
 function fillSelect(select, options, selected = "") {
+  if (!select) return;
   select.innerHTML = options.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
 }
 
@@ -291,6 +313,7 @@ function applyTicketTypeRules() {
   toggleFormField(".ticket-delivery-field", rules.deliveryLead);
   toggleFormField(".ticket-sales-field", rules.salesLead);
   toggleFormField(".ticket-customer-field", rules.customer);
+  applyCustomerDefaults();
   renderReadinessChecks();
 }
 
@@ -311,6 +334,61 @@ function openTicketDialog() {
 function setTicketDefaults() {
   if (!$("#ticketDueDate").value) $("#ticketDueDate").value = isoDateFromToday(2);
   if (!$("#workflowDueDate").value) $("#workflowDueDate").value = isoDateFromToday(2);
+}
+
+function applyCustomerDefaults() {
+  const rules = currentTicketTypeRules();
+  const currentUser = getCurrentPerson();
+  if (rules.deliveryLead && currentUser?.manager_id) {
+    $("#ticketDeliveryLead").value = currentUser.manager_id;
+  }
+  const customer = findById(state.customers, $("#ticketCustomer")?.value);
+  if (rules.salesLead && customer?.sales_lead_id) {
+    $("#ticketSalesLead").value = customer.sales_lead_id;
+  }
+}
+
+function applyWorkflowCustomerDefaults() {
+  const customer = findById(state.customers, $("#workflowCustomer")?.value);
+  const currentUser = getCurrentPerson();
+  if (currentUser?.manager_id) $("#workflowDeliveryLead").value = currentUser.manager_id;
+  if (customer?.sales_lead_id) $("#workflowSalesLead").value = customer.sales_lead_id;
+}
+
+function applyTicketDetailRules() {
+  const ticketType = $("#ticketDetailType").value;
+  const rules = ticketTypeRules[ticketType] || ticketTypeRules.task;
+  toggleFormField(".detail-delivery-field", rules.deliveryLead);
+  toggleFormField(".detail-sales-field", rules.salesLead);
+  toggleFormField(".detail-customer-field", rules.customer);
+  applyTicketDetailCustomerDefaults();
+  renderDetailReadinessChecks();
+}
+
+function applyTicketDetailCustomerDefaults(force = false) {
+  const rules = ticketTypeRules[$("#ticketDetailType")?.value] || ticketTypeRules.task;
+  const customer = findById(state.customers, $("#ticketDetailCustomer")?.value);
+  if (rules.salesLead && customer?.sales_lead_id && (force || !$("#ticketDetailSalesLead").value)) {
+    $("#ticketDetailSalesLead").value = customer.sales_lead_id;
+  }
+}
+
+function renderDetailReadinessChecks() {
+  const fieldset = $("#ticketDetailReadinessFieldset");
+  if (!fieldset) return;
+  const ticket = findById(state.tickets, state.selectedTicketId);
+  const config = readinessByType[$("#ticketDetailType")?.value] || readinessByType.task;
+  const saved = ticket?.readiness_checks || {};
+  fieldset.classList.toggle("hidden", !config.checks.length);
+  $("#ticketDetailReadinessHelp").textContent = config.help;
+  $("#ticketDetailReadinessOptions").innerHTML = config.checks.map(([value, label]) => `
+    <label><input type="checkbox" name="detailReadiness" value="${value}" ${saved[value] ? "checked" : ""} /> ${escapeHtml(label)}</label>
+  `).join("");
+}
+
+function detailReadinessPayload(ticketType) {
+  const checks = readinessByType[ticketType]?.checks || [];
+  return Object.fromEntries(checks.map(([key]) => [key, Boolean($(`input[name="detailReadiness"][value="${key}"]`)?.checked)]));
 }
 
 async function signIn() {
@@ -432,12 +510,13 @@ async function loadData() {
   if (!state.session) return;
   setSync("Syncing");
   try {
-    const [stages, tickets, templates, templateTasks, customerActions, people, customers] = await Promise.all([
+    const [stages, tickets, templates, templateTasks, customerActions, ticketComments, people, customers] = await Promise.all([
       api("/workflow_stages?select=*&order=stage_type.asc,position.asc"),
       api("/tickets?select=*&order=created_at.desc"),
       api("/workflow_templates?select=*&order=name.asc"),
       api("/workflow_template_tasks?select=*&order=position.asc"),
       api("/customer_actions?select=*&order=created_at.desc"),
+      api("/ticket_comments?select=*&order=created_at.asc"),
       api("/app_people?select=*&order=is_current_user.desc,display_name.asc"),
       api("/customers?select=*&order=name.asc"),
     ]);
@@ -446,6 +525,7 @@ async function loadData() {
     state.templates = templates;
     state.templateTasks = templateTasks;
     state.customerActions = customerActions;
+    state.ticketComments = ticketComments;
     state.people = people;
     state.customers = customers;
     syncObjectSelects();
@@ -460,23 +540,35 @@ function syncObjectSelects() {
   const personOptions = state.people.map((person) => [person.id, `${person.display_name} - ${person.role_label}`]);
   const customerOptions = state.customers.map((customer) => [customer.id, customer.name]);
   const ticketStageOptions = state.stages.filter((stage) => stage.stage_type === "ticket").map((stage) => [stage.id, stage.name]);
-  const currentUser = state.people.find((person) => person.is_current_user) || state.people[0];
+  const currentUser = getCurrentPerson();
+  const defaultDeliveryLeadId = currentUser?.manager_id || currentUser?.id || "";
   const fallbackSalesLead = state.people.find((person) => person.display_name === "Harry Dumm") || state.people.find((person) => person.role_label.includes("Sales")) || state.people[0];
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
 
   fillSelect($("#ticketOwner"), personOptions, currentUser?.id || "");
-  fillSelect($("#ticketDeliveryLead"), personOptions, currentUser?.id || "");
+  fillSelect($("#ticketDeliveryLead"), personOptions, defaultDeliveryLeadId);
   fillSelect($("#ticketSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#workflowOwner"), personOptions, currentUser?.id || "");
-  fillSelect($("#workflowDeliveryLead"), personOptions, currentUser?.id || "");
+  fillSelect($("#workflowDeliveryLead"), personOptions, defaultDeliveryLeadId);
   fillSelect($("#workflowSalesLead"), personOptions, fallbackSalesLead?.id || "");
   fillSelect($("#ticketCustomer"), customerOptions, state.customers[0]?.id || "");
   fillSelect($("#workflowCustomer"), customerOptions, state.customers[0]?.id || "");
   fillSelect($("#actionCustomer"), customerOptions, state.customers[0]?.id || "");
   fillSelect($("#ticketStatus"), ticketStageOptions, newStage?.id || "");
   fillSelect($("#ticketDetailStatus"), ticketStageOptions);
+  fillSelect($("#ticketDetailType"), ticketTypes);
+  fillSelect($("#ticketDetailPriority"), priorities);
+  fillSelect($("#ticketDetailOwner"), personOptions);
+  fillSelect($("#ticketDetailDeliveryLead"), personOptions);
+  fillSelect($("#ticketDetailSalesLead"), personOptions);
+  fillSelect($("#ticketDetailCustomer"), customerOptions);
+  fillSelect($("#ticketDetailBlockedReason"), blockedReasons);
+  fillSelect($("#customerSalesLead"), personOptions, fallbackSalesLead?.id || "");
+  fillSelect($("#customerEditStatus"), customerStatuses);
+  fillSelect($("#customerEditSalesLead"), personOptions);
   setTicketDefaults();
   applyTicketTypeRules();
+  applyWorkflowCustomerDefaults();
 }
 
 function setSync(message) {
@@ -692,22 +784,32 @@ function openTicketDetails(ticketId) {
   if (!ticket) return;
   state.selectedTicketId = ticketId;
   const stage = findById(state.stages, ticket.status_stage_id);
+  const rules = ticketTypeRules[ticket.ticket_type] || ticketTypeRules.task;
   $("#ticketDetailTitle").textContent = ticket.title;
   $("#ticketDetailSubtitle").textContent = `${labelFor(ticketTypes, ticket.ticket_type)} · ${stage?.name || "No status"}`;
-  $("#ticketDetailContent").innerHTML = `
-    <div class="mini-list">
-      <div><strong>Description</strong><br><span class="muted">${escapeHtml(ticket.description || "No description")}</span></div>
-      <div><strong>Owner</strong><br><span class="muted">${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span></div>
-      ${ticket.delivery_lead_name ? `<div><strong>Delivery Lead</strong><br><span class="muted">${escapeHtml(ticket.delivery_lead_name)}</span></div>` : ""}
-      ${ticket.sales_lead_name ? `<div><strong>Sales Lead</strong><br><span class="muted">${escapeHtml(ticket.sales_lead_name)}</span></div>` : ""}
-      ${ticket.customer_name ? `<div><strong>Customer</strong><br><span class="muted">${escapeHtml(ticket.customer_name)}</span></div>` : ""}
-      <div><strong>Due date</strong><br><span class="muted">${formatDate(ticket.due_date)}</span></div>
-      <div><strong>Blocked reason</strong><br><span class="muted">${labelFor(blockedReasons, ticket.blocked_reason) || "Not blocked"}</span></div>
-      <div><strong>Readiness</strong><br><span class="muted">${ticket.readiness_score || 0}%</span></div>
-    </div>
-  `;
   const ticketStageOptions = state.stages.filter((item) => item.stage_type === "ticket").map((item) => [item.id, item.name]);
+  const personOptions = state.people.map((person) => [person.id, `${person.display_name} - ${person.role_label}`]);
+  const customerOptions = state.customers.map((customer) => [customer.id, customer.name]);
+  fillSelect($("#ticketDetailType"), ticketTypes, ticket.ticket_type);
+  fillSelect($("#ticketDetailPriority"), priorities, ticket.priority);
+  fillSelect($("#ticketDetailOwner"), personOptions, ticket.work_owner_id || "");
+  fillSelect($("#ticketDetailDeliveryLead"), personOptions, ticket.delivery_lead_id || "");
+  fillSelect($("#ticketDetailSalesLead"), personOptions, ticket.sales_lead_id || "");
+  fillSelect($("#ticketDetailCustomer"), customerOptions, ticket.customer_id || "");
   fillSelect($("#ticketDetailStatus"), ticketStageOptions, ticket.status_stage_id || "");
+  fillSelect($("#ticketDetailBlockedReason"), blockedReasons, ticket.blocked_reason || "");
+  $("#ticketDetailTitleInput").value = ticket.title || "";
+  $("#ticketDetailDescription").value = ticket.description || "";
+  $("#ticketDetailDueDate").value = ticket.due_date || "";
+  if (rules.deliveryLead && !$("#ticketDetailDeliveryLead").value) {
+    $("#ticketDetailDeliveryLead").value = getCurrentPerson()?.manager_id || "";
+  }
+  if (rules.salesLead && !$("#ticketDetailSalesLead").value) {
+    const customer = findById(state.customers, $("#ticketDetailCustomer").value);
+    $("#ticketDetailSalesLead").value = customer?.sales_lead_id || "";
+  }
+  renderTicketComments(ticket.id);
+  applyTicketDetailRules();
   $("#ticketDetailDialog").showModal();
   refreshIcons();
 }
@@ -715,14 +817,75 @@ function openTicketDetails(ticketId) {
 async function updateTicketDetails(event) {
   event.preventDefault();
   if (!state.selectedTicketId) return;
+  const ticketType = $("#ticketDetailType").value;
+  const rules = ticketTypeRules[ticketType] || ticketTypeRules.task;
+  const owner = findById(state.people, $("#ticketDetailOwner").value);
+  const deliveryLead = rules.deliveryLead ? findById(state.people, $("#ticketDetailDeliveryLead").value) : null;
+  const salesLead = rules.salesLead ? findById(state.people, $("#ticketDetailSalesLead").value) : null;
+  const customer = rules.customer ? findById(state.customers, $("#ticketDetailCustomer").value) : null;
+  const readiness = detailReadinessPayload(ticketType);
+  const readinessKeys = Object.keys(readiness);
+  const readinessScore = readinessKeys.length ? Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100) : 0;
   try {
     setSync("Saving");
     await api(`/tickets?id=eq.${state.selectedTicketId}`, {
       method: "PATCH",
-      body: { status_stage_id: $("#ticketDetailStatus").value || null },
+      body: {
+        title: $("#ticketDetailTitleInput").value.trim(),
+        description: $("#ticketDetailDescription").value.trim() || null,
+        ticket_type: ticketType,
+        priority: $("#ticketDetailPriority").value,
+        work_owner_id: owner?.id || null,
+        work_owner_name: owner?.display_name || null,
+        owner_name: owner?.display_name || null,
+        delivery_lead_id: deliveryLead?.id || null,
+        delivery_lead_name: deliveryLead?.display_name || null,
+        sales_lead_id: salesLead?.id || null,
+        sales_lead_name: salesLead?.display_name || null,
+        customer_id: customer?.id || null,
+        customer_name: customer?.name || null,
+        due_date: $("#ticketDetailDueDate").value || null,
+        status_stage_id: $("#ticketDetailStatus").value || null,
+        blocked_reason: $("#ticketDetailBlockedReason").value || null,
+        blocked_since: $("#ticketDetailBlockedReason").value ? new Date().toISOString() : null,
+        readiness_checks: readiness,
+        readiness_score: readinessScore,
+      },
     });
     $("#ticketDetailDialog").close();
     await loadData();
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+function renderTicketComments(ticketId) {
+  const comments = state.ticketComments.filter((comment) => comment.ticket_id === ticketId);
+  $("#ticketCommentsList").innerHTML = comments.map((comment) => `
+    <article class="comment-item">
+      <p>${escapeHtml(comment.body)}</p>
+      <span>${new Date(comment.created_at).toLocaleString()}</span>
+    </article>
+  `).join("") || `<div class="empty-state">No updates yet.</div>`;
+  $("#ticketCommentText").value = "";
+}
+
+async function addTicketComment() {
+  const body = $("#ticketCommentText").value.trim();
+  if (!state.selectedTicketId || !body) return;
+  try {
+    setSync("Adding update");
+    await api("/ticket_comments", {
+      method: "POST",
+      body: {
+        ticket_id: state.selectedTicketId,
+        author_id: state.user.id,
+        body,
+      },
+    });
+    state.ticketComments = await api("/ticket_comments?select=*&order=created_at.asc");
+    renderTicketComments(state.selectedTicketId);
+    setSync("Ready");
   } catch (error) {
     setSync(error.message);
   }
@@ -910,6 +1073,9 @@ function renderCustomers() {
       refreshIcons();
     });
   });
+  $$(".customer-edit-button").forEach((button) => {
+    button.addEventListener("click", () => openCustomerEdit(button.dataset.customerId));
+  });
 }
 
 function customerTile(customer) {
@@ -921,6 +1087,7 @@ function customerTile(customer) {
       <div>
         <h3>${escapeHtml(customer.name)}</h3>
         <p>${escapeHtml(customer.primary_contact || customer.segment || "No primary contact yet")}</p>
+        <span class="muted">Sales: ${escapeHtml(customer.sales_lead_name || "Not set")}</span>
       </div>
       <div class="tag-row">
         <span class="pill primary">${escapeHtml(customer.segment || "No segment")}</span>
@@ -930,7 +1097,10 @@ function customerTile(customer) {
         <span><strong>${tickets.length}</strong> tickets</span>
         <span><strong>${openActions.length}</strong> open actions</span>
       </div>
-      <button class="secondary-button customer-detail-button" type="button" data-customer-id="${customer.id}">Details</button>
+      <div class="tile-actions">
+        <button class="secondary-button customer-detail-button" type="button" data-customer-id="${customer.id}">Details</button>
+        <button class="secondary-button customer-edit-button" type="button" data-customer-id="${customer.id}">Edit</button>
+      </div>
     </article>
   `;
 }
@@ -941,7 +1111,10 @@ function renderCustomerDetail(customer) {
   $("#customersView").innerHTML = `
     <div class="detail-header">
       <button class="secondary-button" type="button" id="backToCustomers"><i data-lucide="arrow-left"></i><span>Customers</span></button>
-      <button class="primary-button" type="button" id="addCustomerButton"><i data-lucide="plus"></i><span>Customer</span></button>
+      <div class="auth-actions">
+        <button class="secondary-button" type="button" id="editCustomerButton"><i data-lucide="settings"></i><span>Edit</span></button>
+        <button class="primary-button" type="button" id="addCustomerButton"><i data-lucide="plus"></i><span>Customer</span></button>
+      </div>
     </div>
     <div class="content-grid">
       <section class="panel">
@@ -951,6 +1124,7 @@ function renderCustomerDetail(customer) {
           <div><strong>Status</strong><br><span class="muted">${labelFor(customerStatuses, customer.status || "active")}</span></div>
           <div><strong>Primary contact</strong><br><span class="muted">${escapeHtml(customer.primary_contact || "Not set")}</span></div>
           <div><strong>Email</strong><br><span class="muted">${escapeHtml(customer.contact_email || "Not set")}</span></div>
+          <div><strong>Sales Lead</strong><br><span class="muted">${escapeHtml(customer.sales_lead_name || "Not set")}</span></div>
           <div><strong>Notes</strong><br><span class="muted">${escapeHtml(customer.notes || "No notes yet")}</span></div>
         </div>
       </section>
@@ -982,11 +1156,13 @@ function renderCustomerDetail(customer) {
     refreshIcons();
   });
   $("#addCustomerButton").addEventListener("click", () => $("#customerDialog").showModal());
+  $("#editCustomerButton").addEventListener("click", () => openCustomerEdit(customer.id));
   bindTicketDetailButtons();
 }
 
 async function createCustomer(event) {
   event.preventDefault();
+  const salesLead = findById(state.people, $("#customerSalesLead").value);
   try {
     setSync("Creating customer");
     const [customer] = await api("/customers", {
@@ -997,6 +1173,8 @@ async function createCustomer(event) {
         primary_contact: $("#customerPrimaryContact").value.trim() || null,
         contact_email: $("#customerContactEmail").value.trim() || null,
         status: $("#customerStatus").value,
+        sales_lead_id: salesLead?.id || null,
+        sales_lead_name: salesLead?.display_name || null,
         notes: $("#customerNotes").value.trim() || null,
       },
     });
@@ -1004,6 +1182,48 @@ async function createCustomer(event) {
     $("#customerForm").reset();
     $("#customerStatus").value = "active";
     $("#customerDialog").close();
+    await loadData();
+    switchView("customers");
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+function openCustomerEdit(customerId) {
+  const customer = findById(state.customers, customerId);
+  if (!customer) return;
+  state.selectedCustomerId = customerId;
+  $("#customerEditName").value = customer.name || "";
+  $("#customerEditSegment").value = customer.segment || "";
+  $("#customerEditPrimaryContact").value = customer.primary_contact || "";
+  $("#customerEditContactEmail").value = customer.contact_email || "";
+  $("#customerEditStatus").value = customer.status || "active";
+  $("#customerEditSalesLead").value = customer.sales_lead_id || "";
+  $("#customerEditNotes").value = customer.notes || "";
+  $("#customerEditDialog").showModal();
+}
+
+async function updateCustomer(event) {
+  event.preventDefault();
+  const customerId = state.selectedCustomerId;
+  const salesLead = findById(state.people, $("#customerEditSalesLead").value);
+  if (!customerId) return;
+  try {
+    setSync("Saving customer");
+    await api(`/customers?id=eq.${customerId}`, {
+      method: "PATCH",
+      body: {
+        name: $("#customerEditName").value.trim(),
+        segment: $("#customerEditSegment").value.trim() || null,
+        primary_contact: $("#customerEditPrimaryContact").value.trim() || null,
+        contact_email: $("#customerEditContactEmail").value.trim() || null,
+        status: $("#customerEditStatus").value,
+        sales_lead_id: salesLead?.id || null,
+        sales_lead_name: salesLead?.display_name || null,
+        notes: $("#customerEditNotes").value.trim() || null,
+      },
+    });
+    $("#customerEditDialog").close();
     await loadData();
     switchView("customers");
   } catch (error) {
@@ -1068,25 +1288,83 @@ function renderCalendar() {
     return date;
   });
   $("#calendarView").innerHTML = `
-    <div class="calendar-grid">
-      ${days.map((date) => calendarDay(date)).join("")}
+    <div class="calendar-planner">
+      <div class="calendar-header-spacer">User</div>
+      ${days.map((date) => `<div class="calendar-date-head">${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>`).join("")}
+      ${state.people.map((person) => calendarPersonRow(person, days)).join("")}
+    </div>
+  `;
+  bindCalendarPlanning();
+}
+
+function calendarPersonRow(person, days) {
+  return `
+    <div class="calendar-person" style="--person-color: ${escapeHtml(person.color || "#235c51")}">
+      <span class="avatar-dot">${escapeHtml(initials(person.display_name))}</span>
+      <div>
+        <strong>${escapeHtml(person.display_name)}</strong>
+        <span>${escapeHtml(person.role_label)}</span>
+      </div>
+    </div>
+    ${days.map((date) => calendarPersonDay(person, date)).join("")}
+  `;
+}
+
+function calendarPersonDay(person, date) {
+  const iso = date.toISOString().slice(0, 10);
+  const tickets = state.tickets.filter((ticket) => ticket.due_date === iso && (ticket.work_owner_id === person.id || ticket.work_owner_name === person.display_name || ticket.owner_name === person.display_name));
+  return `
+    <div class="calendar-cell" data-person-id="${person.id}" data-date="${iso}">
+      ${tickets.map((ticket) => `
+        <button class="calendar-ticket ticket-detail-button" type="button" draggable="true" data-ticket-id="${ticket.id}" style="--person-color: ${escapeHtml(person.color || "#235c51")}">
+          ${escapeHtml(ticket.title)}
+        </button>
+      `).join("")}
     </div>
   `;
 }
 
-function calendarDay(date) {
-  const iso = date.toISOString().slice(0, 10);
-  const tickets = state.tickets.filter((ticket) => ticket.due_date === iso);
-  const actions = state.customerActions.filter((action) => action.due_date === iso);
-  return `
-    <article class="calendar-item">
-      <div class="calendar-date">${date.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}</div>
-      <div class="mini-list">
-        ${tickets.map((ticket) => `<div>${escapeHtml(ticket.title)}<br><span class="muted">${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span></div>`).join("")}
-        ${actions.map((action) => `<div>${escapeHtml(action.action)}<br><span class="muted">${escapeHtml(action.customer_name)}</span></div>`).join("")}
-      </div>
-    </article>
-  `;
+function bindCalendarPlanning() {
+  $$(".calendar-ticket").forEach((ticket) => {
+    ticket.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", ticket.dataset.ticketId);
+    });
+  });
+
+  $$(".calendar-cell").forEach((cell) => {
+    cell.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      cell.classList.add("drop-target");
+    });
+    cell.addEventListener("dragleave", () => cell.classList.remove("drop-target"));
+    cell.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      cell.classList.remove("drop-target");
+      const person = findById(state.people, cell.dataset.personId);
+      await rescheduleTicket(event.dataTransfer.getData("text/plain"), cell.dataset.date, person);
+    });
+  });
+
+  bindTicketDetailButtons();
+}
+
+async function rescheduleTicket(ticketId, dueDate, person) {
+  if (!ticketId || !person) return;
+  try {
+    setSync("Planning");
+    await api(`/tickets?id=eq.${ticketId}`, {
+      method: "PATCH",
+      body: {
+        due_date: dueDate,
+        work_owner_id: person.id,
+        work_owner_name: person.display_name,
+        owner_name: person.display_name,
+      },
+    });
+    await loadData();
+  } catch (error) {
+    setSync(error.message);
+  }
 }
 
 function renderReports() {
@@ -1152,12 +1430,14 @@ function renderAdmin() {
         <h2>Users</h2>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Role</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Role</th><th>Manager</th><th>Color</th><th>Status</th></tr></thead>
             <tbody>
               ${state.people.map((person) => `
                 <tr>
                   <td>${escapeHtml(person.display_name)}</td>
                   <td>${escapeHtml(person.role_label)}</td>
+                  <td>${escapeHtml(person.manager_name || "None")}</td>
+                  <td><span class="color-chip" style="--person-color: ${escapeHtml(person.color || "#235c51")}"></span></td>
                   <td>${person.is_current_user ? `<span class="pill primary">Default user</span>` : `<span class="pill">Demo user</span>`}</td>
                 </tr>
               `).join("")}
@@ -1183,6 +1463,18 @@ function labelFor(options, value) {
 
 function findById(items, id) {
   return items.find((item) => item.id === id);
+}
+
+function getCurrentPerson() {
+  return state.people.find((person) => person.is_current_user) || state.people[0];
+}
+
+function colorForPersonName(name) {
+  return state.people.find((person) => person.display_name === name)?.color || "#235c51";
+}
+
+function initials(name) {
+  return String(name || "?").split(" ").map((part) => part[0]).join("").slice(0, 2).toUpperCase();
 }
 
 function daysUntil(dateString) {

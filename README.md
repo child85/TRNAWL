@@ -152,7 +152,10 @@ Included now:
 - Dashboard with open, overdue, blocked, and customer-action counts
 - Drag-and-drop ticket board
 - Ticket creation with Owner, type-specific leads, optional customer, default due date, priority, blocked reason, initial status, and type-specific readiness checks
-- Ticket details with status update from the board
+- Ticket details with editable fields, readiness checks, blocked reason, status update, and working notes
+- Customer records with default Sales Lead
+- Admin user overview with manager and calendar color
+- Calendar planning by user, due date, and colored ticket assignment
 - Selectable demo people and customers for ticket creation
 - Customers view with customer tiles, customer creation, and detail pages
 - Workflow template view

@@ -597,6 +597,12 @@ th {
   font-size: 22px;
 }
 
+.tile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
 .detail-header {
   display: flex;
   justify-content: space-between;
@@ -612,6 +618,92 @@ th {
 .calendar-grid {
   grid-template-columns: repeat(7, minmax(150px, 1fr));
   overflow-x: auto;
+}
+
+.calendar-planner {
+  display: grid;
+  grid-template-columns: 210px repeat(14, minmax(150px, 1fr));
+  gap: 1px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  background: var(--line);
+}
+
+.calendar-header-spacer,
+.calendar-date-head,
+.calendar-person,
+.calendar-cell {
+  background: var(--surface);
+  min-height: 74px;
+  padding: 10px;
+}
+
+.calendar-header-spacer,
+.calendar-date-head {
+  min-height: 48px;
+  color: var(--primary-strong);
+  font-size: 12px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
+
+.calendar-person {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-left: 4px solid var(--person-color);
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.calendar-person strong,
+.calendar-person span {
+  display: block;
+}
+
+.calendar-person span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.avatar-dot,
+.color-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  color: #fff;
+  background: var(--person-color);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.color-chip {
+  width: 22px;
+  height: 22px;
+}
+
+.calendar-cell {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+}
+
+.calendar-ticket {
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--person-color);
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text);
+  padding: 8px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: grab;
 }
 
 .calendar-item {
@@ -648,6 +740,10 @@ th {
   border-radius: 3px;
   box-shadow: 0 24px 80px rgba(15, 23, 20, 0.26);
   padding: 0;
+}
+
+#ticketDetailDialog {
+  width: min(1120px, calc(100vw - 28px));
 }
 
 .modal::backdrop {
@@ -730,6 +826,52 @@ th {
   margin: 16px 0;
 }
 
+.ticket-detail-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.detail-side {
+  border-left: 1px solid var(--line);
+  padding-left: 16px;
+}
+
+.detail-side h3 {
+  margin: 0 0 10px;
+  color: var(--navy);
+}
+
+.comments-list {
+  display: grid;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+
+.comment-item {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #fbfdff;
+  padding: 10px;
+}
+
+.comment-item p {
+  margin: 0 0 8px;
+}
+
+.comment-item span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.note-label {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
 .preview-list div {
   border: 1px solid var(--line);
   border-radius: 3px;
@@ -761,7 +903,8 @@ th {
   .metric-grid,
   .content-grid,
   .template-grid,
-  .customer-tile-grid {
+  .customer-tile-grid,
+  .ticket-detail-layout {
     grid-template-columns: 1fr 1fr;
   }
 }
@@ -785,9 +928,17 @@ th {
   .content-grid,
   .template-grid,
   .customer-tile-grid,
+  .ticket-detail-layout,
   .form-grid,
   .readiness-options {
     grid-template-columns: 1fr;
+  }
+
+  .detail-side {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding-left: 0;
+    padding-top: 16px;
   }
 
   .detail-header {

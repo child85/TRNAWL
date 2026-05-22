@@ -147,17 +147,41 @@
         <div class="modal-header">
           <div>
             <h2 id="ticketDetailTitle">Ticket Details</h2>
-            <p id="ticketDetailSubtitle">Review ticket context and move it to another status.</p>
+            <p id="ticketDetailSubtitle">Edit the ticket, update status, and add working notes.</p>
           </div>
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
-        <div id="ticketDetailContent" class="detail-content"></div>
-        <div class="form-grid">
-          <label>Status<select id="ticketDetailStatus"></select></label>
+        <div class="ticket-detail-layout">
+          <section class="detail-main">
+            <div class="form-grid">
+              <label class="span-2">Title<input id="ticketDetailTitleInput" required /></label>
+              <label class="span-2">Description<textarea id="ticketDetailDescription" rows="5"></textarea></label>
+              <label>Type<select id="ticketDetailType"></select></label>
+              <label>Priority<select id="ticketDetailPriority"></select></label>
+              <label>Owner<select id="ticketDetailOwner"></select></label>
+              <label class="detail-delivery-field">Delivery Lead<select id="ticketDetailDeliveryLead"></select></label>
+              <label class="detail-sales-field">Sales Lead<select id="ticketDetailSalesLead"></select></label>
+              <label class="detail-customer-field">Customer<select id="ticketDetailCustomer"></select></label>
+              <label>Due date<input id="ticketDetailDueDate" type="date" /></label>
+              <label>Status<select id="ticketDetailStatus"></select></label>
+              <label>Blocked reason<select id="ticketDetailBlockedReason"></select></label>
+            </div>
+            <fieldset id="ticketDetailReadinessFieldset" class="readiness-fieldset">
+              <legend>Readiness checks</legend>
+              <p id="ticketDetailReadinessHelp" class="fieldset-note"></p>
+              <div id="ticketDetailReadinessOptions" class="readiness-options"></div>
+            </fieldset>
+          </section>
+          <aside class="detail-side">
+            <h3>Updates</h3>
+            <div id="ticketCommentsList" class="comments-list"></div>
+            <label class="note-label">Add update<textarea id="ticketCommentText" rows="4" placeholder="What changed, what is blocked, or what needs attention?"></textarea></label>
+          </aside>
         </div>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Close</button>
-          <button class="primary-button" type="submit">Save Status</button>
+          <button class="secondary-button" type="button" id="addTicketCommentButton">Add Update</button>
+          <button class="primary-button" type="submit">Save Ticket</button>
         </div>
       </form>
     </dialog>
@@ -177,11 +201,37 @@
           <label>Primary contact<input id="customerPrimaryContact" /></label>
           <label>Contact email<input id="customerContactEmail" type="email" /></label>
           <label>Status<select id="customerStatus"></select></label>
+          <label>Sales Lead<select id="customerSalesLead"></select></label>
           <label class="span-2">Notes<textarea id="customerNotes" rows="3"></textarea></label>
         </div>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
           <button class="primary-button" type="submit">Create Customer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="customerEditDialog" class="modal">
+      <form id="customerEditForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Edit Customer</h2>
+            <p>Update default ownership and basic customer information.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label>Name<input id="customerEditName" required /></label>
+          <label>Segment<input id="customerEditSegment" /></label>
+          <label>Primary contact<input id="customerEditPrimaryContact" /></label>
+          <label>Contact email<input id="customerEditContactEmail" type="email" /></label>
+          <label>Status<select id="customerEditStatus"></select></label>
+          <label>Sales Lead<select id="customerEditSalesLead"></select></label>
+          <label class="span-2">Notes<textarea id="customerEditNotes" rows="3"></textarea></label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Save Customer</button>
         </div>
       </form>
     </dialog>
