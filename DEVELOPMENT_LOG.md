@@ -151,3 +151,15 @@ Changed:
 - Added searchable task and customer selection in the booking dialog.
 - Calendar reservation chips now show the linked task or customer context.
 - Kept capacity bookings local to the browser for the MVP.
+
+### Calendar Booking Task Creation
+
+Made calendar bookings removable and able to create a task directly from the drop dialog.
+
+Changed:
+
+- Added delete controls to calendar booking chips.
+- Changed the task search field to also work as a new task title.
+- Added a note field to the calendar booking dialog.
+- Saving a booking now creates a task when no existing task is selected.
+- Booking notes are saved to the linked or newly created ticket.

@@ -194,6 +194,19 @@ const developmentLog = [
     ],
     notes: ["Capacity bookings remain browser-local for the MVP."],
   },
+  {
+    date: "2026-05-22",
+    title: "Calendar booking task creation",
+    summary: "Made calendar bookings removable and able to create a task directly from the drop dialog.",
+    changes: [
+      "Added delete controls to calendar booking chips.",
+      "Changed the task search field to also work as a new task title.",
+      "Added a note field to the calendar booking dialog.",
+      "Saving a booking now creates a task when no existing task is selected.",
+      "Booking notes are saved to the linked or newly created ticket.",
+    ],
+    notes: ["Existing local bookings can now be removed from the calendar."],
+  },
 ];
 
 const ticketTypes = [
@@ -998,10 +1011,15 @@ async function addTicketComment() {
 }
 
 async function saveTicketComment(body) {
+  await saveCommentForTicket(state.selectedTicketId, body);
+}
+
+async function saveCommentForTicket(ticketId, body) {
+  if (!ticketId || !body) return;
   await api("/ticket_comments", {
     method: "POST",
     body: {
-      ticket_id: state.selectedTicketId,
+      ticket_id: ticketId,
       author_id: state.user.id,
       body,
     },
@@ -1497,10 +1515,12 @@ function calendarTicketChip(ticket) {
 function calendarReservationChip(reservation) {
   const context = reservation.ticketTitle || reservation.customerName || reservation.targetName || "Reserved";
   const duration = reservation.days > 1 ? `${reservation.dayNumber || 1}/${reservation.days}` : `${reservation.days || 1}d`;
+  const bookingKey = reservation.bookingId || reservation.id;
   return `
     <span class="capacity-chip reservation-chip" style="--person-color: ${escapeHtml(reservation.color || "#0067b1")}">
       <strong>${escapeHtml(reservation.personName)}</strong>
       <small>${escapeHtml(duration)} · ${escapeHtml(context)}</small>
+      <button class="reservation-delete-button" type="button" data-booking-id="${escapeHtml(bookingKey)}" title="Delete booking" aria-label="Delete booking">×</button>
     </span>
   `;
 }
@@ -1528,6 +1548,27 @@ function bindCapacityCalendar() {
   });
 
   bindTicketDetailButtons();
+  bindCalendarReservationDeletes();
+}
+
+function bindCalendarReservationDeletes() {
+  $$(".reservation-delete-button").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      deleteCalendarReservation(button.dataset.bookingId);
+    });
+  });
+}
+
+function deleteCalendarReservation(bookingId) {
+  if (!bookingId) return;
+  state.calendarReservations = state.calendarReservations.filter((reservation) => {
+    const reservationKey = reservation.bookingId || reservation.id;
+    return reservationKey !== bookingId && reservation.id !== bookingId;
+  });
+  localStorage.setItem("trnawl.calendarReservations", JSON.stringify(state.calendarReservations));
+  renderCalendar();
 }
 
 function openCalendarReservationDialog(personId, date) {
@@ -1549,6 +1590,7 @@ function openCalendarReservationDialog(personId, date) {
   $("#calendarBookingDays").value = "1";
   $("#calendarBookingTaskSearch").value = "";
   $("#calendarBookingCustomerSearch").value = "";
+  $("#calendarBookingNote").value = "";
   renderCalendarBookingOptions();
   $("#calendarReservationDialog").showModal();
 }
@@ -1639,7 +1681,8 @@ function updateCalendarBookingSummary() {
   const customer = findById(state.customers, pending.customerId);
   const days = normalizedBookingDays();
   const dates = businessDatesFrom(pending.date, days);
-  const context = ticket?.title || customer?.name || "Pick a task or customer";
+  const typedTask = $("#calendarBookingTaskSearch").value.trim();
+  const context = ticket?.title || (typedTask ? `New task: ${typedTask}` : customer?.name || "Type a task title or pick a task/customer");
   $("#calendarBookingSummary").innerHTML = `
     <strong>${escapeHtml(person?.display_name || "Team member")}</strong>
     <span>${escapeHtml(days)} business day${days === 1 ? "" : "s"} · ${escapeHtml(formatDate(dates[0]))}${dates.length > 1 ? ` to ${escapeHtml(formatDate(dates[dates.length - 1]))}` : ""}</span>
@@ -1647,21 +1690,69 @@ function updateCalendarBookingSummary() {
   `;
 }
 
-function saveCalendarReservation(event) {
+async function saveCalendarReservation(event) {
   event.preventDefault();
   const pending = state.pendingCalendarReservation;
   if (!pending) return;
-  if (!pending.ticketId && !pending.customerId) {
-    $("#calendarBookingSummary").innerHTML = `<strong>Pick a task or customer before booking time.</strong>`;
+  const taskTitle = $("#calendarBookingTaskSearch").value.trim();
+  const note = $("#calendarBookingNote").value.trim();
+  if (!pending.ticketId && !taskTitle && !pending.customerId) {
+    $("#calendarBookingSummary").innerHTML = `<strong>Type a task title or pick a task/customer before booking time.</strong>`;
     return;
   }
-  addCalendarReservation(pending.personId, pending.date, {
-    days: normalizedBookingDays(),
-    ticketId: pending.ticketId,
-    customerId: pending.customerId,
+  try {
+    setSync("Booking time");
+    let ticketId = pending.ticketId;
+    if (!ticketId) {
+      const ticket = await createCalendarBookingTask(pending, taskTitle, note);
+      ticketId = ticket.id;
+      state.tickets = [ticket, ...state.tickets];
+    } else if (note) {
+      await saveCommentForTicket(ticketId, note);
+    }
+    addCalendarReservation(pending.personId, pending.date, {
+      days: normalizedBookingDays(),
+      ticketId,
+      customerId: pending.customerId,
+    });
+    state.pendingCalendarReservation = null;
+    $("#calendarReservationDialog").close();
+    await loadData();
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+async function createCalendarBookingTask(pending, taskTitle, note) {
+  const person = findById(state.people, pending.personId);
+  const customer = findById(state.customers, pending.customerId);
+  const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
+  const title = taskTitle || `${customer?.name || "Calendar"} work`;
+  const [ticket] = await api("/tickets", {
+    method: "POST",
+    body: {
+      title,
+      description: note || `Calendar booking for ${person?.display_name || "team member"}.`,
+      ticket_type: "task",
+      priority: "medium",
+      work_owner_id: person?.id || null,
+      work_owner_name: person?.display_name || null,
+      owner_name: person?.display_name || null,
+      customer_id: customer?.id || null,
+      customer_name: customer?.name || null,
+      due_date: pending.date,
+      status_stage_id: newStage?.id || null,
+      requester_id: state.user.id,
+      requester_name: state.user.email,
+      blocked_reason: null,
+      readiness_checks: {},
+      readiness_score: 0,
+    },
   });
-  state.pendingCalendarReservation = null;
-  $("#calendarReservationDialog").close();
+  if (note) {
+    await saveCommentForTicket(ticket.id, note);
+  }
+  return ticket;
 }
 
 function normalizedBookingDays() {

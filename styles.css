@@ -736,6 +736,9 @@ th {
   flex-direction: column;
   gap: 2px;
   max-width: 100%;
+  min-width: 72px;
+  position: relative;
+  padding-right: 26px;
 }
 
 .reservation-chip strong,
@@ -748,6 +751,28 @@ th {
   color: #34495c;
   font-size: 11px;
   font-weight: 700;
+}
+
+.reservation-delete-button {
+  position: absolute;
+  top: 4px;
+  right: 5px;
+  width: 18px;
+  height: 18px;
+  min-height: 18px;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--navy);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0;
+}
+
+.reservation-delete-button:hover {
+  border-color: #b8c8d8;
+  background: #fff;
+  color: var(--danger);
 }
 
 .calendar-filters {
@@ -862,6 +887,12 @@ th {
   border-left: 4px solid var(--primary);
   background: #f8fbff;
   padding: 11px 12px;
+  margin-top: 14px;
+}
+
+.booking-note {
+  display: grid;
+  gap: 7px;
   margin-top: 14px;
 }
 
