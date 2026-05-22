@@ -177,7 +177,7 @@ const developmentLog = [
     changes: [
       "Moved updates and history into the primary detail area.",
       "Made ticket facts more compact.",
-      "Kept Owner visible with a Take ownership action.",
+      "Kept Owner visible as a direct assignment select.",
       "Locked customer, lead, and blocker settings behind a small Edit control.",
     ],
     notes: ["Rare ticket context changes now feel deliberate without hiding them."],
@@ -232,6 +232,17 @@ const developmentLog = [
       "Exact task or customer search matches are resolved before creating new records.",
     ],
     notes: ["This pass focused on data clarity and avoiding accidental duplicate or misleading work items."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Assignment control cleanup",
+    summary: "Removed the extra Take ownership button from ticket details to reduce visual weight.",
+    changes: [
+      "Removed the Take ownership button from the Assignment section.",
+      "Kept the Owner select as the single place to change assignment.",
+      "Reduced horizontal crowding in the ticket detail view.",
+    ],
+    notes: ["Assignment remains editable without a duplicate shortcut."],
   },
 ];
 
@@ -360,7 +371,6 @@ function bindEvents() {
   $("#ticketDetailCustomer").addEventListener("change", () => applyTicketDetailCustomerDefaults(true));
   $("#addTicketCommentButton").addEventListener("click", addTicketComment);
   $("#toggleTicketSettingsButton").addEventListener("click", toggleTicketSettings);
-  $("#takeOwnershipButton").addEventListener("click", takeTicketOwnership);
   $("#calendarReservationForm").addEventListener("submit", saveCalendarReservation);
   $("#calendarBookingTaskSearch").addEventListener("input", renderCalendarBookingOptions);
   $("#calendarBookingCustomerSearch").addEventListener("input", renderCalendarBookingOptions);
@@ -486,12 +496,6 @@ function applyTicketSettingsLock() {
     const field = control.closest("label");
     control.disabled = !unlocked || Boolean(field?.classList.contains("hidden"));
   });
-}
-
-function takeTicketOwnership() {
-  const currentUser = getCurrentPerson();
-  if (!currentUser) return;
-  $("#ticketDetailOwner").value = currentUser.id;
 }
 
 function applyTicketDetailCustomerDefaults(force = false) {

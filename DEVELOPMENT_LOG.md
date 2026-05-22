@@ -136,7 +136,7 @@ Changed:
 
 - Moved updates and history into the primary ticket detail area.
 - Made ticket facts more compact.
-- Kept Owner visible with a Take ownership action.
+- Kept Owner visible as a direct assignment select.
 - Locked customer, lead, and blocker settings behind a small Edit control.
 - Kept rare context changes available without making them feel like daily ticket fields.
 
@@ -187,3 +187,13 @@ Changed:
 - Calendar-created customer work now becomes a customer action instead of a hidden-customer generic task.
 - Calendar bookings now use the last booked business day as the due date.
 - Exact task or customer search matches are resolved before creating new records.
+
+### Assignment Control Cleanup
+
+Removed the extra Take ownership button from ticket details to reduce visual weight.
+
+Changed:
+
+- Removed the Take ownership button from the Assignment section.
+- Kept the Owner select as the single place to change assignment.
+- Reduced horizontal crowding in the ticket detail view.
