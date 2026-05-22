@@ -21,8 +21,40 @@ const viewMeta = {
   actions: ["Customer Actions", "External dependencies with internal accountability."],
   calendar: ["Calendar", "Upcoming work, due dates, and customer follow-ups."],
   reports: ["Reports", "Blocked work, aging, readiness, and customer action visibility."],
+  devlog: ["Dev Log", "Short record of what changed during development."],
   admin: ["Admin", "Runtime status and project configuration."],
 };
+
+const developmentLog = [
+  {
+    date: "2026-05-22",
+    title: "First deployable MVP",
+    summary: "Built and deployed the first static Azure MVP backed by Supabase.",
+    changes: [
+      "Added Supabase email/password authentication.",
+      "Added dashboard, tickets, workflows, customer actions, calendar, reports, and admin views.",
+      "Added drag-and-drop ticket board and ticket creation.",
+      "Added New SOW Workflow starter.",
+      "Added customer action register.",
+      "Updated Azure Static Web Apps workflow to deploy static files without a build step.",
+    ],
+    notes: [
+      "AI is intentionally excluded from this MVP.",
+      "Supabase email confirmation is currently enabled.",
+    ],
+  },
+  {
+    date: "2026-05-22",
+    title: "Development log added",
+    summary: "Added an in-app Dev Log navigation point and a repo-level DEVELOPMENT_LOG.md.",
+    changes: [
+      "Added Dev Log to the main navigation.",
+      "Added short change summaries inside the app.",
+      "Started DEVELOPMENT_LOG.md for ongoing development notes.",
+    ],
+    notes: ["Keep future entries short and outcome-focused."],
+  },
+];
 
 const ticketTypes = [
   ["task", "Task"],
@@ -266,6 +298,7 @@ function renderAll() {
   renderCustomerActions();
   renderCalendar();
   renderReports();
+  renderDevLog();
   renderAdmin();
   refreshIcons();
 }
@@ -661,6 +694,30 @@ function renderReports() {
         <h2>Blocked Reason Aging</h2>
         ${blockedReasonList()}
       </section>
+    </div>
+  `;
+}
+
+function renderDevLog() {
+  $("#devlogView").innerHTML = `
+    <div class="report-grid">
+      ${developmentLog.map((entry) => `
+        <section class="panel">
+          <div class="tag-row" style="margin-top: 0; margin-bottom: 10px;">
+            <span class="pill primary">${escapeHtml(entry.date)}</span>
+          </div>
+          <h2>${escapeHtml(entry.title)}</h2>
+          <p class="muted">${escapeHtml(entry.summary)}</p>
+          <div class="mini-list">
+            ${entry.changes.map((change) => `<div>${escapeHtml(change)}</div>`).join("")}
+          </div>
+          ${entry.notes.length ? `
+            <div class="tag-row">
+              ${entry.notes.map((note) => `<span class="pill">${escapeHtml(note)}</span>`).join("")}
+            </div>
+          ` : ""}
+        </section>
+      `).join("")}
     </div>
   `;
 }

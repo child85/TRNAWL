@@ -155,6 +155,7 @@ Included now:
 - Customer action register
 - Calendar view for upcoming ticket and customer-action due dates
 - Basic reports for weekly operational visibility
+- Development log view with short change summaries
 - Admin/status page
 
 AI features are intentionally excluded from this first MVP.
@@ -184,6 +185,7 @@ AI features are intentionally excluded from this first MVP.
 
 ```text
 TRNAWL/
+├── DEVELOPMENT_LOG.md
 ├── app.js
 ├── docs/
 │   ├── product-overview.md
