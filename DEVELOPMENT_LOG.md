@@ -35,3 +35,15 @@ Changed:
 - Renamed responsibility fields to Delivery Lead and Opportunity Lead.
 - Removed pricing and delivery-reviewed readiness checks.
 - Removed owner-assigned readiness check because assignment happens when the ticket is created.
+
+### Corporate Design Refresh
+
+Restyled the MVP to feel closer to a modern corporate assurance platform.
+
+Changed:
+
+- Reworked the color system around a crisp business blue, white surfaces, and a restrained yellow accent.
+- Replaced rounded prototype styling with sharper rectangular panels and controls.
+- Added a branded top accent bar and stronger sidebar identity.
+- Improved dashboard cards, ticket cards, tables, modals, and navigation styling.
+- Kept the app lightweight and static while making it feel less like a basic HTML prototype.

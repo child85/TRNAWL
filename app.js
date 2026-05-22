@@ -69,6 +69,18 @@ const developmentLog = [
     ],
     notes: ["Ticket responsibility is now object-based instead of free text."],
   },
+  {
+    date: "2026-05-22",
+    title: "Corporate design refresh",
+    summary: "Restyled the MVP toward a modern corporate assurance platform.",
+    changes: [
+      "Reworked the color system around business blue, white surfaces, and restrained yellow accents.",
+      "Replaced rounded prototype styling with sharper rectangular panels and controls.",
+      "Added a branded top accent bar and stronger sidebar identity.",
+      "Improved dashboard cards, ticket cards, tables, modals, and navigation.",
+    ],
+    notes: ["Kept the app static and lightweight while making it feel less basic."],
+  },
 ];
 
 const ticketTypes = [
