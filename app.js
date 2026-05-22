@@ -282,6 +282,18 @@ const developmentLog = [
     ],
     notes: ["Workflow dependencies are visible in ticket text and blocker state for the MVP."],
   },
+  {
+    date: "2026-05-22",
+    title: "Ticket deletion controls",
+    summary: "Added ticket deletion from details and an admin cleanup tool for all tickets.",
+    changes: [
+      "Added Delete Ticket to the ticket detail view.",
+      "Added an Admin danger zone to delete all tickets.",
+      "Cleared local calendar reservations when affected tickets are deleted.",
+      "Added Supabase delete policy migration for authenticated users.",
+    ],
+    notes: ["Bulk delete is intentionally guarded by a typed confirmation prompt."],
+  },
 ];
 
 const ticketTypes = [
@@ -408,6 +420,7 @@ function bindEvents() {
   $("#ticketDetailType").addEventListener("change", applyTicketDetailRules);
   $("#ticketDetailCustomer").addEventListener("change", () => applyTicketDetailCustomerDefaults(true));
   $("#addTicketCommentButton").addEventListener("click", addTicketComment);
+  $("#deleteTicketButton").addEventListener("click", deleteSelectedTicket);
   $("#toggleTicketSettingsButton").addEventListener("click", toggleTicketSettings);
   $("#calendarReservationForm").addEventListener("submit", saveCalendarReservation);
   $("#calendarBookingTaskSearch").addEventListener("input", () => showCalendarBookingDropdown("task"));
@@ -1064,6 +1077,56 @@ async function updateTicketDetails(event) {
       await saveTicketComment(updateText);
     }
     $("#ticketDetailDialog").close();
+    await loadData();
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+async function deleteSelectedTicket() {
+  if (!state.selectedTicketId) return;
+  const ticket = findById(state.tickets, state.selectedTicketId);
+  const confirmed = window.confirm(`Delete ticket "${ticket?.title || "selected ticket"}"? This also removes its updates and workflow links.`);
+  if (!confirmed) return;
+  try {
+    setSync("Deleting ticket");
+    await deleteTicketsByIds([state.selectedTicketId]);
+    $("#ticketDetailDialog").close();
+    state.selectedTicketId = null;
+    await loadData();
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+async function deleteTicketsByIds(ticketIds) {
+  const ids = ticketIds.filter(Boolean);
+  if (!ids.length) return;
+  for (const ticketId of ids) {
+    await api(`/tickets?id=eq.${ticketId}`, {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+  }
+  state.calendarReservations = state.calendarReservations.filter((reservation) => !ids.includes(reservation.ticketId));
+  localStorage.setItem("trnawl.calendarReservations", JSON.stringify(state.calendarReservations));
+}
+
+async function deleteAllTickets() {
+  if (!state.tickets.length) {
+    setSync("No tickets to delete");
+    return;
+  }
+  const confirmation = window.prompt(`This permanently deletes ${state.tickets.length} tickets and their updates. Type DELETE ALL TICKETS to continue.`);
+  if (confirmation !== "DELETE ALL TICKETS") return;
+  try {
+    setSync("Deleting all tickets");
+    await api("/tickets?id=not.is.null", {
+      method: "DELETE",
+      prefer: "return=minimal",
+    });
+    state.calendarReservations = [];
+    localStorage.setItem("trnawl.calendarReservations", JSON.stringify(state.calendarReservations));
     await loadData();
   } catch (error) {
     setSync(error.message);
@@ -2121,8 +2184,14 @@ function renderAdmin() {
           </table>
         </div>
       </section>
+      <section class="panel danger-zone">
+        <h2>Danger Zone</h2>
+        <p class="muted">For MVP cleanup only. This permanently deletes every ticket, including ticket updates and workflow links.</p>
+        <button class="danger-button" type="button" id="deleteAllTicketsButton">Delete All Tickets</button>
+      </section>
     </div>
   `;
+  $("#deleteAllTicketsButton").addEventListener("click", deleteAllTickets);
 }
 
 function labelFor(options, value) {

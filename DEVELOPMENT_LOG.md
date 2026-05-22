@@ -231,3 +231,14 @@ Changed:
 - Defaulted review tasks to depend on the intake task.
 - Defaulted final review to depend on all review tasks.
 - Generated tickets now include dependency notes and dependency blockers.
+
+### Ticket Deletion Controls
+
+Added ticket deletion from details and an admin cleanup tool for all tickets.
+
+Changed:
+
+- Added Delete Ticket to the ticket detail view.
+- Added an Admin danger zone to delete all tickets.
+- Cleared local calendar reservations when affected tickets are deleted.
+- Added Supabase delete policy migration for authenticated users.
