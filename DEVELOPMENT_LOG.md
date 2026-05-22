@@ -32,7 +32,7 @@ Changed:
 - Added five demo people: Bugs Bunny, Daffy Duck, Lola Bunny, Porky Pig, and Wile E. Coyote.
 - Added three demo customers: Acme Anvils Ltd., ToonTown Telecom, and Roadrunner Logistics.
 - Replaced free-text owner/customer fields with selects.
-- Renamed responsibility fields to Delivery Lead and Opportunity Lead.
+- Renamed responsibility fields to Delivery Lead and Sales Lead.
 - Removed pricing and delivery-reviewed readiness checks.
 - Removed owner-assigned readiness check because assignment happens when the ticket is created.
 
@@ -58,7 +58,7 @@ Changed:
 - Added Sales Lead to the New SOW workflow starter.
 - Added two demo sales people: Harry Dumm and Lloyd Duemmer.
 - Stored Sales Lead as a ticket reference and display name.
-- Kept Delivery Lead, Sales Lead, and Opportunity Lead as separate responsibility fields.
+- Kept Delivery Lead and Sales Lead as separate responsibility fields.
 
 ### Customer and Ownership Cleanup
 
@@ -72,3 +72,17 @@ Changed:
 - Moved the user overview into Admin.
 - Added Owner as the person doing the work while keeping Delivery Lead as the lead role.
 - Made readiness checks conditional by ticket type so generic and internal tasks stay lightweight.
+
+### Ticket Form Sanity Pass
+
+Reduced ticket responsibility fields based on ticket type.
+
+Changed:
+
+- Removed Opportunity Lead from ticket and workflow entry.
+- Kept Sales Lead only for SOW work.
+- Kept Delivery Lead only for SOW and delivery review work.
+- Hid customer selection for generic tasks and internal actions.
+- Defaulted new ticket due dates to two days from today.
+- Added ticket details from the ticket board with status update.
+- Added an initial status selector when creating tickets.

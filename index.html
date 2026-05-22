@@ -98,11 +98,11 @@
           <label>Type<select id="ticketType"></select></label>
           <label>Priority<select id="ticketPriority"></select></label>
           <label>Owner<select id="ticketOwner"></select></label>
-          <label>Delivery Lead<select id="ticketDeliveryLead"></select></label>
-          <label>Sales Lead<select id="ticketSalesLead"></select></label>
-          <label>Opportunity Lead<select id="ticketOpportunityLead"></select></label>
-          <label>Customer<select id="ticketCustomer"></select></label>
+          <label class="ticket-delivery-field">Delivery Lead<select id="ticketDeliveryLead"></select></label>
+          <label class="ticket-sales-field">Sales Lead<select id="ticketSalesLead"></select></label>
+          <label class="ticket-customer-field">Customer<select id="ticketCustomer"></select></label>
           <label>Due date<input id="ticketDueDate" type="date" /></label>
+          <label>Status<select id="ticketStatus"></select></label>
           <label>Blocked reason<select id="ticketBlockedReason"></select></label>
         </div>
         <fieldset id="readinessFieldset" class="readiness-fieldset">
@@ -132,13 +132,32 @@
           <label>Owner<select id="workflowOwner"></select></label>
           <label>Delivery Lead<select id="workflowDeliveryLead"></select></label>
           <label>Sales Lead<select id="workflowSalesLead"></select></label>
-          <label>Opportunity Lead<select id="workflowOpportunityLead"></select></label>
           <label>First due date<input id="workflowDueDate" type="date" /></label>
         </div>
         <div id="workflowPreview" class="preview-list"></div>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
           <button class="primary-button" type="submit">Create Workflow</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="ticketDetailDialog" class="modal">
+      <form id="ticketDetailForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2 id="ticketDetailTitle">Ticket Details</h2>
+            <p id="ticketDetailSubtitle">Review ticket context and move it to another status.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div id="ticketDetailContent" class="detail-content"></div>
+        <div class="form-grid">
+          <label>Status<select id="ticketDetailStatus"></select></label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Close</button>
+          <button class="primary-button" type="submit">Save Status</button>
         </div>
       </form>
     </dialog>

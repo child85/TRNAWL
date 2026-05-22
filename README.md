@@ -25,7 +25,7 @@ TRNAWL provides a Jira-like board where useful, but avoids Jira-like complexity.
 ## Core Features
 
 - Fast ticket creation for SOWs, delivery reviews, internal tasks, and customer actions
-- Clear ownership with Owner, Delivery Lead, Sales Lead, Opportunity Lead, due dates, status, and priority
+- Clear ownership with Owner, Delivery Lead, Sales Lead, due dates, status, and priority
 - Drag-and-drop ticket board with simple workflow stages
 - Reminder support before tickets become overdue
 - Customer overview with tiles, basic customer records, related tickets, and customer actions
@@ -151,7 +151,8 @@ Included now:
 - Supabase email/password authentication
 - Dashboard with open, overdue, blocked, and customer-action counts
 - Drag-and-drop ticket board
-- Ticket creation with Owner, Delivery Lead, Sales Lead, Opportunity Lead, customer, due date, priority, blocked reason, and type-specific readiness checks
+- Ticket creation with Owner, type-specific leads, optional customer, default due date, priority, blocked reason, initial status, and type-specific readiness checks
+- Ticket details with status update from the board
 - Selectable demo people and customers for ticket creation
 - Customers view with customer tiles, customer creation, and detail pages
 - Workflow template view

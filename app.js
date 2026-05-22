@@ -13,6 +13,7 @@ const state = {
   people: [],
   customers: [],
   selectedCustomerId: null,
+  selectedTicketId: null,
   search: "",
   typeFilter: "all",
 };
@@ -66,7 +67,7 @@ const developmentLog = [
       "Preselected Thomas as Delivery Lead.",
       "Added five demo people with Looney Tunes names.",
       "Added three demo customers with playful company names.",
-      "Renamed responsibility fields to Delivery Lead and Opportunity Lead.",
+      "Renamed responsibility fields to Delivery Lead and Sales Lead.",
       "Removed pricing, delivery-reviewed, and owner-assigned readiness checks.",
     ],
     notes: ["Ticket responsibility is now object-based instead of free text."],
@@ -93,7 +94,7 @@ const developmentLog = [
       "Seeded Harry Dumm and Lloyd Duemmer as demo sales people.",
       "Stored Sales Lead as a ticket reference and display name.",
     ],
-    notes: ["Delivery Lead, Sales Lead, and Opportunity Lead are now separate responsibilities."],
+    notes: ["Delivery Lead and Sales Lead are separate responsibilities."],
   },
   {
     date: "2026-05-22",
@@ -107,6 +108,20 @@ const developmentLog = [
       "Made readiness checks depend on ticket type so generic/internal tasks stay lightweight.",
     ],
     notes: ["Readiness now appears for SOW, delivery review, and customer-action tickets only."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Ticket form sanity pass",
+    summary: "Reduced responsibility fields by ticket type and added ticket details/status updates.",
+    changes: [
+      "Removed Opportunity Lead from ticket and workflow entry.",
+      "Show Delivery Lead only where delivery governance is useful.",
+      "Show Sales Lead only for SOW work.",
+      "Hide customer selection for generic tasks and internal actions.",
+      "Default new ticket due dates to two days from today.",
+      "Added ticket detail opening from the board with status update.",
+    ],
+    notes: ["Owner remains the person actually working the ticket."],
   },
 ];
 
@@ -150,6 +165,14 @@ const customerStatuses = [
   ["paused", "Paused"],
   ["inactive", "Inactive"],
 ];
+
+const ticketTypeRules = {
+  task: { deliveryLead: false, salesLead: false, customer: false },
+  internal_action: { deliveryLead: false, salesLead: false, customer: false },
+  delivery_review: { deliveryLead: true, salesLead: false, customer: true },
+  sow: { deliveryLead: true, salesLead: true, customer: true },
+  customer_action: { deliveryLead: false, salesLead: false, customer: true },
+};
 
 const readinessByType = {
   task: {
@@ -202,7 +225,7 @@ function init() {
   fillSelect($("#ticketBlockedReason"), blockedReasons);
   fillSelect($("#actionStatus"), actionStatuses);
   fillSelect($("#customerStatus"), customerStatuses);
-  renderReadinessChecks();
+  applyTicketTypeRules();
   bindEvents();
   renderShell();
   if (state.session?.access_token) {
@@ -218,9 +241,10 @@ function bindEvents() {
   $("#signUpButton").addEventListener("click", signUp);
   $("#signOutButton").addEventListener("click", signOut);
   $("#refreshButton").addEventListener("click", loadData);
-  $("#newTicketButton").addEventListener("click", () => $("#ticketDialog").showModal());
+  $("#newTicketButton").addEventListener("click", openTicketDialog);
   $("#ticketForm").addEventListener("submit", createTicket);
-  $("#ticketType").addEventListener("change", renderReadinessChecks);
+  $("#ticketType").addEventListener("change", applyTicketTypeRules);
+  $("#ticketDetailForm").addEventListener("submit", updateTicketDetails);
   $("#workflowForm").addEventListener("submit", startWorkflow);
   $("#customerForm").addEventListener("submit", createCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
@@ -256,6 +280,37 @@ function renderReadinessChecks() {
 function readinessPayloadForType(ticketType) {
   const checks = readinessByType[ticketType]?.checks || [];
   return Object.fromEntries(checks.map(([key]) => [key, Boolean($(`input[name="readiness"][value="${key}"]`)?.checked)]));
+}
+
+function currentTicketTypeRules() {
+  return ticketTypeRules[$("#ticketType")?.value] || ticketTypeRules.task;
+}
+
+function applyTicketTypeRules() {
+  const rules = currentTicketTypeRules();
+  toggleFormField(".ticket-delivery-field", rules.deliveryLead);
+  toggleFormField(".ticket-sales-field", rules.salesLead);
+  toggleFormField(".ticket-customer-field", rules.customer);
+  renderReadinessChecks();
+}
+
+function toggleFormField(selector, visible) {
+  const field = $(selector);
+  if (!field) return;
+  field.classList.toggle("hidden", !visible);
+  const control = field.querySelector("select, input, textarea");
+  if (control) control.disabled = !visible;
+}
+
+function openTicketDialog() {
+  setTicketDefaults();
+  applyTicketTypeRules();
+  $("#ticketDialog").showModal();
+}
+
+function setTicketDefaults() {
+  if (!$("#ticketDueDate").value) $("#ticketDueDate").value = isoDateFromToday(2);
+  if (!$("#workflowDueDate").value) $("#workflowDueDate").value = isoDateFromToday(2);
 }
 
 async function signIn() {
@@ -404,21 +459,24 @@ async function loadData() {
 function syncObjectSelects() {
   const personOptions = state.people.map((person) => [person.id, `${person.display_name} - ${person.role_label}`]);
   const customerOptions = state.customers.map((customer) => [customer.id, customer.name]);
+  const ticketStageOptions = state.stages.filter((stage) => stage.stage_type === "ticket").map((stage) => [stage.id, stage.name]);
   const currentUser = state.people.find((person) => person.is_current_user) || state.people[0];
   const fallbackSalesLead = state.people.find((person) => person.display_name === "Harry Dumm") || state.people.find((person) => person.role_label.includes("Sales")) || state.people[0];
-  const fallbackOpportunityLead = state.people.find((person) => person.display_name === "Lola Bunny") || state.people[1] || currentUser;
+  const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
 
   fillSelect($("#ticketOwner"), personOptions, currentUser?.id || "");
   fillSelect($("#ticketDeliveryLead"), personOptions, currentUser?.id || "");
   fillSelect($("#ticketSalesLead"), personOptions, fallbackSalesLead?.id || "");
-  fillSelect($("#ticketOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
   fillSelect($("#workflowOwner"), personOptions, currentUser?.id || "");
   fillSelect($("#workflowDeliveryLead"), personOptions, currentUser?.id || "");
   fillSelect($("#workflowSalesLead"), personOptions, fallbackSalesLead?.id || "");
-  fillSelect($("#workflowOpportunityLead"), personOptions, fallbackOpportunityLead?.id || currentUser?.id || "");
   fillSelect($("#ticketCustomer"), customerOptions, state.customers[0]?.id || "");
   fillSelect($("#workflowCustomer"), customerOptions, state.customers[0]?.id || "");
   fillSelect($("#actionCustomer"), customerOptions, state.customers[0]?.id || "");
+  fillSelect($("#ticketStatus"), ticketStageOptions, newStage?.id || "");
+  fillSelect($("#ticketDetailStatus"), ticketStageOptions);
+  setTicketDefaults();
+  applyTicketTypeRules();
 }
 
 function setSync(message) {
@@ -489,7 +547,7 @@ function ticketTable(tickets) {
   return `
     <div class="table-wrap">
       <table>
-        <thead><tr><th>Ticket</th><th>Owner</th><th>Due</th><th>Status</th></tr></thead>
+        <thead><tr><th>Ticket</th><th>Owner</th><th>Due</th><th>Status</th><th></th></tr></thead>
         <tbody>
           ${tickets.map((ticket) => `
             <tr>
@@ -497,6 +555,7 @@ function ticketTable(tickets) {
               <td>${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</td>
               <td>${formatDate(ticket.due_date)}</td>
               <td>${ticketPills(ticket)}</td>
+              <td><button class="secondary-button ticket-detail-button" type="button" data-ticket-id="${ticket.id}">Details</button></td>
             </tr>
           `).join("")}
         </tbody>
@@ -545,7 +604,7 @@ function renderTickets() {
     state.typeFilter = event.target.value;
     renderTickets();
   });
-  $("#boardNewTicket").addEventListener("click", () => $("#ticketDialog").showModal());
+  $("#boardNewTicket").addEventListener("click", openTicketDialog);
   bindDragAndDrop();
 }
 
@@ -569,6 +628,7 @@ function ticketCard(ticket) {
         <span class="pill">Owner: ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span>
         ${ticket.delivery_lead_name ? `<span class="pill">Delivery: ${escapeHtml(ticket.delivery_lead_name)}</span>` : ""}
       </div>
+      <button class="secondary-button ticket-detail-button" type="button" data-ticket-id="${ticket.id}">Details</button>
     </article>
   `;
 }
@@ -589,6 +649,8 @@ function bindDragAndDrop() {
     });
   });
 
+  bindTicketDetailButtons();
+
   $$(".board-column").forEach((column) => {
     column.addEventListener("dragover", (event) => {
       event.preventDefault();
@@ -599,6 +661,15 @@ function bindDragAndDrop() {
       event.preventDefault();
       column.classList.remove("drop-target");
       await updateTicketStage(event.dataTransfer.getData("text/plain"), column.dataset.stageId);
+    });
+  });
+}
+
+function bindTicketDetailButtons() {
+  $$(".ticket-detail-button").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      openTicketDetails(button.dataset.ticketId);
     });
   });
 }
@@ -616,18 +687,59 @@ async function updateTicketStage(ticketId, stageId) {
   }
 }
 
+function openTicketDetails(ticketId) {
+  const ticket = findById(state.tickets, ticketId);
+  if (!ticket) return;
+  state.selectedTicketId = ticketId;
+  const stage = findById(state.stages, ticket.status_stage_id);
+  $("#ticketDetailTitle").textContent = ticket.title;
+  $("#ticketDetailSubtitle").textContent = `${labelFor(ticketTypes, ticket.ticket_type)} · ${stage?.name || "No status"}`;
+  $("#ticketDetailContent").innerHTML = `
+    <div class="mini-list">
+      <div><strong>Description</strong><br><span class="muted">${escapeHtml(ticket.description || "No description")}</span></div>
+      <div><strong>Owner</strong><br><span class="muted">${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span></div>
+      ${ticket.delivery_lead_name ? `<div><strong>Delivery Lead</strong><br><span class="muted">${escapeHtml(ticket.delivery_lead_name)}</span></div>` : ""}
+      ${ticket.sales_lead_name ? `<div><strong>Sales Lead</strong><br><span class="muted">${escapeHtml(ticket.sales_lead_name)}</span></div>` : ""}
+      ${ticket.customer_name ? `<div><strong>Customer</strong><br><span class="muted">${escapeHtml(ticket.customer_name)}</span></div>` : ""}
+      <div><strong>Due date</strong><br><span class="muted">${formatDate(ticket.due_date)}</span></div>
+      <div><strong>Blocked reason</strong><br><span class="muted">${labelFor(blockedReasons, ticket.blocked_reason) || "Not blocked"}</span></div>
+      <div><strong>Readiness</strong><br><span class="muted">${ticket.readiness_score || 0}%</span></div>
+    </div>
+  `;
+  const ticketStageOptions = state.stages.filter((item) => item.stage_type === "ticket").map((item) => [item.id, item.name]);
+  fillSelect($("#ticketDetailStatus"), ticketStageOptions, ticket.status_stage_id || "");
+  $("#ticketDetailDialog").showModal();
+  refreshIcons();
+}
+
+async function updateTicketDetails(event) {
+  event.preventDefault();
+  if (!state.selectedTicketId) return;
+  try {
+    setSync("Saving");
+    await api(`/tickets?id=eq.${state.selectedTicketId}`, {
+      method: "PATCH",
+      body: { status_stage_id: $("#ticketDetailStatus").value || null },
+    });
+    $("#ticketDetailDialog").close();
+    await loadData();
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
 async function createTicket(event) {
   event.preventDefault();
   const ticketType = $("#ticketType").value;
   const readiness = readinessPayloadForType(ticketType);
   const readinessKeys = Object.keys(readiness);
   const readinessScore = readinessKeys.length ? Math.round((Object.values(readiness).filter(Boolean).length / readinessKeys.length) * 100) : 0;
-  const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
+  const rules = ticketTypeRules[ticketType] || ticketTypeRules.task;
+  const selectedStage = findById(state.stages, $("#ticketStatus").value) || state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
   const owner = findById(state.people, $("#ticketOwner").value);
-  const deliveryLead = findById(state.people, $("#ticketDeliveryLead").value);
-  const salesLead = findById(state.people, $("#ticketSalesLead").value);
-  const opportunityLead = findById(state.people, $("#ticketOpportunityLead").value);
-  const customer = findById(state.customers, $("#ticketCustomer").value);
+  const deliveryLead = rules.deliveryLead ? findById(state.people, $("#ticketDeliveryLead").value) : null;
+  const salesLead = rules.salesLead ? findById(state.people, $("#ticketSalesLead").value) : null;
+  const customer = rules.customer ? findById(state.customers, $("#ticketCustomer").value) : null;
   const body = {
     title: $("#ticketTitle").value.trim(),
     description: $("#ticketDescription").value.trim() || null,
@@ -639,17 +751,17 @@ async function createTicket(event) {
     delivery_lead_name: deliveryLead?.display_name || null,
     sales_lead_id: salesLead?.id || null,
     sales_lead_name: salesLead?.display_name || null,
-    opportunity_lead_id: opportunityLead?.id || null,
+    opportunity_lead_id: null,
     customer_id: customer?.id || null,
     owner_name: owner?.display_name || null,
-    requester_name: opportunityLead?.display_name || state.user.email,
+    requester_name: state.user.email,
     customer_name: customer?.name || null,
     due_date: $("#ticketDueDate").value || null,
     blocked_reason: $("#ticketBlockedReason").value || null,
     blocked_since: $("#ticketBlockedReason").value ? new Date().toISOString() : null,
     readiness_checks: readiness,
     readiness_score: readinessScore,
-    status_stage_id: newStage?.id || null,
+    status_stage_id: selectedStage?.id || null,
     requester_id: state.user.id,
   };
 
@@ -659,7 +771,8 @@ async function createTicket(event) {
     $("#ticketForm").reset();
     $("#ticketPriority").value = "medium";
     syncObjectSelects();
-    renderReadinessChecks();
+    setTicketDefaults();
+    applyTicketTypeRules();
     $("#ticketDialog").close();
     await loadData();
   } catch (error) {
@@ -694,6 +807,7 @@ function openWorkflowDialog() {
   const newSow = state.templates.find((template) => template.slug === "new-sow");
   const tasks = newSow ? state.templateTasks.filter((task) => task.template_id === newSow.id) : [];
   $("#workflowPreview").innerHTML = tasks.map((task) => `<div><strong>${task.position}. ${escapeHtml(task.title)}</strong><br><span class="muted">${escapeHtml(task.description || "")}</span></div>`).join("");
+  setTicketDefaults();
   $("#workflowDialog").showModal();
 }
 
@@ -707,7 +821,6 @@ async function startWorkflow(event) {
   const owner = findById(state.people, $("#workflowOwner").value);
   const deliveryLead = findById(state.people, $("#workflowDeliveryLead").value);
   const salesLead = findById(state.people, $("#workflowSalesLead").value);
-  const opportunityLead = findById(state.people, $("#workflowOpportunityLead").value);
   const baseDate = $("#workflowDueDate").value ? new Date(`${$("#workflowDueDate").value}T00:00:00`) : new Date();
 
   try {
@@ -724,6 +837,7 @@ async function startWorkflow(event) {
     });
 
     for (const task of tasks) {
+      const taskRules = ticketTypeRules[task.default_ticket_type] || ticketTypeRules.task;
       const dueDate = new Date(baseDate);
       dueDate.setDate(baseDate.getDate() + (task.suggested_due_offset_days || 0));
       const [ticket] = await api("/tickets", {
@@ -735,17 +849,17 @@ async function startWorkflow(event) {
           priority: task.default_priority,
           blocked_reason: task.default_blocked_reason,
           blocked_since: task.default_blocked_reason ? new Date().toISOString() : null,
-          customer_id: customer?.id || null,
-          customer_name: customer?.name || null,
+          customer_id: taskRules.customer ? customer?.id || null : null,
+          customer_name: taskRules.customer ? customer?.name || null : null,
           work_owner_id: owner?.id || null,
           work_owner_name: owner?.display_name || null,
-          delivery_lead_id: deliveryLead?.id || null,
-          delivery_lead_name: deliveryLead?.display_name || null,
-          sales_lead_id: salesLead?.id || null,
-          sales_lead_name: salesLead?.display_name || null,
-          opportunity_lead_id: opportunityLead?.id || null,
+          delivery_lead_id: taskRules.deliveryLead ? deliveryLead?.id || null : null,
+          delivery_lead_name: taskRules.deliveryLead ? deliveryLead?.display_name || null : null,
+          sales_lead_id: taskRules.salesLead ? salesLead?.id || null : null,
+          sales_lead_name: taskRules.salesLead ? salesLead?.display_name || null : null,
+          opportunity_lead_id: null,
           owner_name: owner?.display_name || null,
-          requester_name: opportunityLead?.display_name || state.user.email,
+          requester_name: state.user.email,
           due_date: dueDate.toISOString().slice(0, 10),
           status_stage_id: newStage?.id || null,
           requester_id: state.user.id,
@@ -868,6 +982,7 @@ function renderCustomerDetail(customer) {
     refreshIcons();
   });
   $("#addCustomerButton").addEventListener("click", () => $("#customerDialog").showModal());
+  bindTicketDetailButtons();
 }
 
 async function createCustomer(event) {
@@ -1085,6 +1200,12 @@ function isOverdue(item) {
 function formatDate(dateString) {
   if (!dateString) return "No date";
   return new Date(`${dateString}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function isoDateFromToday(offsetDays) {
+  const date = new Date();
+  date.setDate(date.getDate() + offsetDays);
+  return date.toISOString().slice(0, 10);
 }
 
 function escapeHtml(value) {

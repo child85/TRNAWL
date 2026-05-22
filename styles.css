@@ -457,6 +457,12 @@ th {
   cursor: grabbing;
 }
 
+.ticket-card .ticket-detail-button {
+  margin-top: 12px;
+  width: 100%;
+  justify-content: center;
+}
+
 .ticket-title {
   color: var(--navy);
   font-weight: 850;
@@ -718,6 +724,10 @@ th {
 .preview-list {
   display: grid;
   gap: 8px;
+}
+
+.detail-content {
+  margin: 16px 0;
 }
 
 .preview-list div {
