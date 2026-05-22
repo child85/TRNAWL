@@ -139,3 +139,15 @@ Changed:
 - Kept Owner visible with a Take ownership action.
 - Locked customer, lead, and blocker settings behind a small Edit control.
 - Kept rare context changes available without making them feel like daily ticket fields.
+
+### Calendar Booking Dialog
+
+Changed drag-and-drop calendar planning so bookings are confirmed before they are saved.
+
+Changed:
+
+- Dropping a person on the calendar now opens a booking dialog.
+- Added days blocked with business-day scheduling.
+- Added searchable task and customer selection in the booking dialog.
+- Calendar reservation chips now show the linked task or customer context.
+- Kept capacity bookings local to the browser for the MVP.

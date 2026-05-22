@@ -228,6 +228,44 @@
       </form>
     </dialog>
 
+    <dialog id="calendarReservationDialog" class="modal">
+      <form id="calendarReservationForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Book Calendar Time</h2>
+            <p>Select the duration and connect the booking to a task or customer.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="booking-person">
+          <span id="calendarBookingAvatar" class="avatar-dot"></span>
+          <div>
+            <strong id="calendarBookingPersonName">Team member</strong>
+            <span id="calendarBookingPersonMeta">Available</span>
+          </div>
+        </div>
+        <div class="form-grid compact-form-grid">
+          <label>Start date<input id="calendarBookingStart" type="date" readonly /></label>
+          <label>Days blocked<input id="calendarBookingDays" type="number" min="1" max="30" value="1" required /></label>
+        </div>
+        <div class="booking-search-grid">
+          <section>
+            <label>Task search<input id="calendarBookingTaskSearch" placeholder="Search task, owner, customer" autocomplete="off" /></label>
+            <div id="calendarBookingTaskResults" class="booking-results"></div>
+          </section>
+          <section>
+            <label>Customer search<input id="calendarBookingCustomerSearch" placeholder="Search customer" autocomplete="off" /></label>
+            <div id="calendarBookingCustomerResults" class="booking-results"></div>
+          </section>
+        </div>
+        <div id="calendarBookingSummary" class="booking-summary"></div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Book Time</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="customerEditDialog" class="modal">
       <form id="customerEditForm" method="dialog" class="modal-form">
         <div class="modal-header">

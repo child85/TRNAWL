@@ -733,6 +733,21 @@ th {
 
 .reservation-chip {
   display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+}
+
+.reservation-chip strong,
+.reservation-chip small {
+  display: block;
+  line-height: 1.2;
+}
+
+.reservation-chip small {
+  color: #34495c;
+  font-size: 11px;
+  font-weight: 700;
 }
 
 .calendar-filters {
@@ -766,6 +781,102 @@ th {
 
 .team-person-card span {
   color: var(--muted);
+  font-size: 12px;
+}
+
+.booking-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--person-color, var(--primary));
+  background: #fbfdff;
+  padding: 12px;
+  margin: 16px 0 14px;
+}
+
+.booking-person strong,
+.booking-person span {
+  display: block;
+}
+
+.booking-person span:not(.avatar-dot) {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.compact-form-grid {
+  gap: 10px;
+}
+
+.booking-search-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.booking-search-grid section {
+  display: grid;
+  gap: 10px;
+}
+
+.booking-results {
+  display: grid;
+  gap: 8px;
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+.booking-result {
+  border: 1px solid var(--line);
+  border-left: 4px solid #d7e2eb;
+  border-radius: 3px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px 11px;
+  text-align: left;
+}
+
+.booking-result:hover,
+.booking-result.selected {
+  border-left-color: var(--primary);
+  background: #f2f8fd;
+}
+
+.booking-result strong,
+.booking-result span {
+  display: block;
+}
+
+.booking-result span {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.booking-summary {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--primary);
+  background: #f8fbff;
+  padding: 11px 12px;
+  margin-top: 14px;
+}
+
+.booking-summary strong,
+.booking-summary span {
+  display: block;
+}
+
+.booking-summary span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.compact-empty {
+  padding: 10px;
   font-size: 12px;
 }
 
@@ -1102,6 +1213,7 @@ th {
   .ticket-detail-layout,
   .compact-ticket-fields,
   .settings-grid,
+  .booking-search-grid,
   .form-grid,
   .calendar-filters,
   .readiness-options {

@@ -22,6 +22,7 @@ const state = {
   calendarRoleFilter: "all",
   calendarNameFilter: "",
   calendarReservations: JSON.parse(localStorage.getItem("trnawl.calendarReservations") || "[]"),
+  pendingCalendarReservation: null,
 };
 
 const viewMeta = {
@@ -181,6 +182,18 @@ const developmentLog = [
     ],
     notes: ["Rare ticket context changes now feel deliberate without hiding them."],
   },
+  {
+    date: "2026-05-22",
+    title: "Calendar booking dialog",
+    summary: "Changed drag-and-drop people planning to ask for duration and booking context before saving.",
+    changes: [
+      "Dropping a person on the calendar now opens a booking dialog.",
+      "Added days blocked with business-day scheduling.",
+      "Added searchable task and customer selection in the booking dialog.",
+      "Calendar reservation chips now show the linked task or customer context.",
+    ],
+    notes: ["Capacity bookings remain browser-local for the MVP."],
+  },
 ];
 
 const ticketTypes = [
@@ -309,6 +322,12 @@ function bindEvents() {
   $("#addTicketCommentButton").addEventListener("click", addTicketComment);
   $("#toggleTicketSettingsButton").addEventListener("click", toggleTicketSettings);
   $("#takeOwnershipButton").addEventListener("click", takeTicketOwnership);
+  $("#calendarReservationForm").addEventListener("submit", saveCalendarReservation);
+  $("#calendarBookingTaskSearch").addEventListener("input", renderCalendarBookingOptions);
+  $("#calendarBookingCustomerSearch").addEventListener("input", renderCalendarBookingOptions);
+  $("#calendarBookingDays").addEventListener("input", updateCalendarBookingSummary);
+  $("#calendarBookingTaskResults").addEventListener("click", selectCalendarBookingTask);
+  $("#calendarBookingCustomerResults").addEventListener("click", selectCalendarBookingCustomer);
   $("#workflowForm").addEventListener("submit", startWorkflow);
   $("#workflowCustomer").addEventListener("change", applyWorkflowCustomerDefaults);
   $("#customerForm").addEventListener("submit", createCustomer);
@@ -1476,9 +1495,12 @@ function calendarTicketChip(ticket) {
 }
 
 function calendarReservationChip(reservation) {
+  const context = reservation.ticketTitle || reservation.customerName || reservation.targetName || "Reserved";
+  const duration = reservation.days > 1 ? `${reservation.dayNumber || 1}/${reservation.days}` : `${reservation.days || 1}d`;
   return `
     <span class="capacity-chip reservation-chip" style="--person-color: ${escapeHtml(reservation.color || "#0067b1")}">
-      ${escapeHtml(reservation.personName)}
+      <strong>${escapeHtml(reservation.personName)}</strong>
+      <small>${escapeHtml(duration)} · ${escapeHtml(context)}</small>
     </span>
   `;
 }
@@ -1501,27 +1523,197 @@ function bindCapacityCalendar() {
       cell.classList.remove("drop-target");
       const payload = event.dataTransfer.getData("text/plain");
       if (!payload.startsWith("person:")) return;
-      addCalendarReservation(payload.replace("person:", ""), cell.dataset.date);
+      openCalendarReservationDialog(payload.replace("person:", ""), cell.dataset.date);
     });
   });
 
   bindTicketDetailButtons();
 }
 
-function addCalendarReservation(personId, date) {
+function openCalendarReservationDialog(personId, date) {
   const person = findById(state.people, personId);
   if (!person) return;
-  const reservation = {
-    id: `${personId}-${date}-${Date.now()}`,
+  const startDate = nextBusinessDate(date);
+  state.pendingCalendarReservation = {
+    personId,
+    date: startDate,
+    ticketId: "",
+    customerId: "",
+  };
+  $("#calendarBookingPersonName").textContent = person.display_name;
+  $("#calendarBookingPersonMeta").textContent = `${person.role_label} · starts ${formatDate(startDate)}`;
+  $("#calendarBookingAvatar").textContent = initials(person.display_name);
+  $(".booking-person").style.setProperty("--person-color", person.color || "#0067b1");
+  $("#calendarBookingAvatar").style.setProperty("--person-color", person.color || "#0067b1");
+  $("#calendarBookingStart").value = startDate;
+  $("#calendarBookingDays").value = "1";
+  $("#calendarBookingTaskSearch").value = "";
+  $("#calendarBookingCustomerSearch").value = "";
+  renderCalendarBookingOptions();
+  $("#calendarReservationDialog").showModal();
+}
+
+function renderCalendarBookingOptions() {
+  if (!state.pendingCalendarReservation) return;
+  const taskQuery = $("#calendarBookingTaskSearch").value.trim().toLowerCase();
+  const customerQuery = $("#calendarBookingCustomerSearch").value.trim().toLowerCase();
+  const selectedTicket = findById(state.tickets, state.pendingCalendarReservation.ticketId);
+  const selectedCustomer = findById(state.customers, state.pendingCalendarReservation.customerId);
+  if (selectedTicket && taskQuery !== selectedTicket.title.toLowerCase()) {
+    state.pendingCalendarReservation.ticketId = "";
+  }
+  if (selectedCustomer && customerQuery !== selectedCustomer.name.toLowerCase()) {
+    state.pendingCalendarReservation.customerId = "";
+  }
+  const taskMatches = state.tickets
+    .filter((ticket) => matchesBookingSearch(ticket, taskQuery, ["title", "customer_name", "work_owner_name", "owner_name"]))
+    .sort((a, b) => daysUntil(a.due_date) - daysUntil(b.due_date))
+    .slice(0, 6);
+  const customerMatches = state.customers
+    .filter((customer) => matchesBookingSearch(customer, customerQuery, ["name", "segment", "primary_contact", "sales_lead_name"]))
+    .slice(0, 6);
+  $("#calendarBookingTaskResults").innerHTML = taskMatches.map(calendarBookingTaskOption).join("") || `<div class="empty-state compact-empty">No tasks found.</div>`;
+  $("#calendarBookingCustomerResults").innerHTML = customerMatches.map(calendarBookingCustomerOption).join("") || `<div class="empty-state compact-empty">No customers found.</div>`;
+  updateCalendarBookingSummary();
+}
+
+function matchesBookingSearch(item, query, fields) {
+  if (!query) return true;
+  return fields.some((field) => String(item[field] || "").toLowerCase().includes(query));
+}
+
+function calendarBookingTaskOption(ticket) {
+  const pending = state.pendingCalendarReservation || {};
+  const selected = pending.ticketId === ticket.id;
+  return `
+    <button class="booking-result ${selected ? "selected" : ""}" type="button" data-ticket-id="${escapeHtml(ticket.id)}">
+      <strong>${escapeHtml(ticket.title)}</strong>
+      <span>${escapeHtml(ticket.customer_name || "No customer")} · due ${escapeHtml(formatDate(ticket.due_date))}</span>
+    </button>
+  `;
+}
+
+function calendarBookingCustomerOption(customer) {
+  const pending = state.pendingCalendarReservation || {};
+  const selected = pending.customerId === customer.id;
+  return `
+    <button class="booking-result ${selected ? "selected" : ""}" type="button" data-customer-id="${escapeHtml(customer.id)}">
+      <strong>${escapeHtml(customer.name)}</strong>
+      <span>${escapeHtml(customer.segment || "No segment")} · Sales: ${escapeHtml(customer.sales_lead_name || "Not set")}</span>
+    </button>
+  `;
+}
+
+function selectCalendarBookingTask(event) {
+  const button = event.target.closest("[data-ticket-id]");
+  if (!button || !state.pendingCalendarReservation) return;
+  const ticket = findById(state.tickets, button.dataset.ticketId);
+  if (!ticket) return;
+  state.pendingCalendarReservation.ticketId = ticket.id;
+  $("#calendarBookingTaskSearch").value = ticket.title;
+  const customer = ticket.customer_id
+    ? findById(state.customers, ticket.customer_id)
+    : state.customers.find((item) => item.name === ticket.customer_name);
+  if (customer) {
+    state.pendingCalendarReservation.customerId = customer.id;
+    $("#calendarBookingCustomerSearch").value = customer.name;
+  }
+  renderCalendarBookingOptions();
+}
+
+function selectCalendarBookingCustomer(event) {
+  const button = event.target.closest("[data-customer-id]");
+  if (!button || !state.pendingCalendarReservation) return;
+  const customer = findById(state.customers, button.dataset.customerId);
+  if (!customer) return;
+  state.pendingCalendarReservation.customerId = customer.id;
+  $("#calendarBookingCustomerSearch").value = customer.name;
+  renderCalendarBookingOptions();
+}
+
+function updateCalendarBookingSummary() {
+  const pending = state.pendingCalendarReservation;
+  if (!pending) return;
+  const person = findById(state.people, pending.personId);
+  const ticket = findById(state.tickets, pending.ticketId);
+  const customer = findById(state.customers, pending.customerId);
+  const days = normalizedBookingDays();
+  const dates = businessDatesFrom(pending.date, days);
+  const context = ticket?.title || customer?.name || "Pick a task or customer";
+  $("#calendarBookingSummary").innerHTML = `
+    <strong>${escapeHtml(person?.display_name || "Team member")}</strong>
+    <span>${escapeHtml(days)} business day${days === 1 ? "" : "s"} · ${escapeHtml(formatDate(dates[0]))}${dates.length > 1 ? ` to ${escapeHtml(formatDate(dates[dates.length - 1]))}` : ""}</span>
+    <span>${escapeHtml(context)}</span>
+  `;
+}
+
+function saveCalendarReservation(event) {
+  event.preventDefault();
+  const pending = state.pendingCalendarReservation;
+  if (!pending) return;
+  if (!pending.ticketId && !pending.customerId) {
+    $("#calendarBookingSummary").innerHTML = `<strong>Pick a task or customer before booking time.</strong>`;
+    return;
+  }
+  addCalendarReservation(pending.personId, pending.date, {
+    days: normalizedBookingDays(),
+    ticketId: pending.ticketId,
+    customerId: pending.customerId,
+  });
+  state.pendingCalendarReservation = null;
+  $("#calendarReservationDialog").close();
+}
+
+function normalizedBookingDays() {
+  return Math.max(1, Math.min(30, Number($("#calendarBookingDays").value) || 1));
+}
+
+function addCalendarReservation(personId, date, details = {}) {
+  const person = findById(state.people, personId);
+  if (!person) return;
+  const ticket = findById(state.tickets, details.ticketId);
+  const customer = findById(state.customers, details.customerId) || (ticket?.customer_id ? findById(state.customers, ticket.customer_id) : null);
+  const dates = businessDatesFrom(date, details.days || 1);
+  const bookingId = `${personId}-${date}-${Date.now()}`;
+  const reservations = dates.map((iso, index) => ({
+    id: `${bookingId}-${index}`,
+    bookingId,
     personId,
     personName: person.display_name,
     role: person.role_label,
     color: person.color,
-    date,
-  };
-  state.calendarReservations = [...state.calendarReservations, reservation];
+    date: iso,
+    startDate: date,
+    days: dates.length,
+    dayNumber: index + 1,
+    ticketId: ticket?.id || null,
+    ticketTitle: ticket?.title || null,
+    customerId: customer?.id || null,
+    customerName: customer?.name || ticket?.customer_name || null,
+  }));
+  state.calendarReservations = [...state.calendarReservations, ...reservations];
   localStorage.setItem("trnawl.calendarReservations", JSON.stringify(state.calendarReservations));
   renderCalendar();
+}
+
+function nextBusinessDate(dateString) {
+  const date = new Date(`${dateString}T00:00:00`);
+  while ([0, 6].includes(date.getDay())) {
+    date.setDate(date.getDate() + 1);
+  }
+  return date.toISOString().slice(0, 10);
+}
+
+function businessDatesFrom(dateString, days) {
+  const dates = [];
+  const date = new Date(`${dateString}T00:00:00`);
+  while (dates.length < days) {
+    if (![0, 6].includes(date.getDay())) {
+      dates.push(date.toISOString().slice(0, 10));
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  return dates;
 }
 
 function renderReports() {
