@@ -15,6 +15,8 @@ const state = {
   customers: [],
   selectedCustomerId: null,
   selectedTicketId: null,
+  selectedWorkflowTemplateId: null,
+  scratchWorkflowMode: false,
   ticketSettingsUnlocked: false,
   activeBookingDropdown: null,
   search: "",
@@ -328,6 +330,18 @@ const developmentLog = [
     ],
     notes: ["Generic tasks should stay ownership-focused."],
   },
+  {
+    date: "2026-05-22",
+    title: "Workflow generation expansion",
+    summary: "Made every workflow card executable and added custom workflow creation from scratch.",
+    changes: [
+      "Added a Workflow from Scratch button.",
+      "Added custom workflow name and task entry in the generator.",
+      "Changed Customer Action Follow-Up and Delivery Review Workflow from Ready labels to Generate Workflow buttons.",
+      "Added real template tasks for the two previously placeholder workflows.",
+    ],
+    notes: ["Scratch workflows create tickets without saving a reusable template yet."],
+  },
 ];
 
 const ticketTypes = [
@@ -467,6 +481,7 @@ function bindEvents() {
   $("#calendarReservationDialog").addEventListener("click", closeCalendarBookingDropdownOnOutsideClick);
   $("#workflowForm").addEventListener("submit", startWorkflow);
   $("#workflowCustomer").addEventListener("change", applyWorkflowCustomerDefaults);
+  $("#workflowScratchTasks").addEventListener("input", renderScratchWorkflowPreview);
   $("#customerForm").addEventListener("submit", createCustomer);
   $("#customerEditForm").addEventListener("submit", updateCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
@@ -1269,37 +1284,78 @@ async function createTicket(event) {
 }
 
 function renderWorkflows() {
-  const newSow = state.templates.find((template) => template.slug === "new-sow");
-  const tasks = newSow ? workflowTasksForTemplate(newSow.id) : [];
-  const dependencies = defaultWorkflowDependencies(tasks);
   $("#workflowsView").innerHTML = `
+    <div class="toolbar">
+      <div></div>
+      <button class="primary-button" type="button" id="startScratchWorkflowButton"><i data-lucide="plus"></i><span>Workflow from Scratch</span></button>
+    </div>
     <div class="template-grid">
       ${state.templates.map((template) => `
         <article class="template-item">
           <h3>${escapeHtml(template.name)}</h3>
           <p>${escapeHtml(template.description || "")}</p>
-          ${template.slug === "new-sow" ? `<button class="primary-button" type="button" id="startSowButton"><i data-lucide="play"></i><span>Generate Workflow</span></button>` : `<span class="pill">Ready</span>`}
+          <button class="primary-button workflow-template-button" type="button" data-template-id="${template.id}"><i data-lucide="play"></i><span>Generate Workflow</span></button>
         </article>
       `).join("")}
     </div>
-    <section class="panel" style="margin-top: 16px;">
-      <h2>New SOW Workflow Tasks</h2>
+    ${state.templates.map((template) => workflowTemplateTaskPanel(template)).join("")}
+  `;
+  $("#startScratchWorkflowButton")?.addEventListener("click", openScratchWorkflowDialog);
+  $$(".workflow-template-button").forEach((button) => {
+    button.addEventListener("click", () => openWorkflowDialog(button.dataset.templateId));
+  });
+}
+
+function workflowTemplateTaskPanel(template) {
+  const tasks = workflowTasksForTemplate(template.id);
+  const dependencies = defaultWorkflowDependencies(tasks);
+  return `
+    <section class="panel workflow-task-panel">
+      <h2>${escapeHtml(template.name)} Tasks</h2>
       <div class="preview-list">
-        ${tasks.map((task) => workflowTaskPreview(task, tasks, dependencies)).join("")}
+        ${tasks.map((task) => workflowTaskPreview(task, tasks, dependencies)).join("") || `<div class="empty-state">No tasks configured yet.</div>`}
       </div>
     </section>
   `;
-  $("#startSowButton")?.addEventListener("click", openWorkflowDialog);
 }
 
-function openWorkflowDialog() {
-  const newSow = state.templates.find((template) => template.slug === "new-sow");
-  const tasks = newSow ? workflowTasksForTemplate(newSow.id) : [];
+function openWorkflowDialog(templateId) {
+  const template = findById(state.templates, templateId);
+  if (!template) return;
+  state.selectedWorkflowTemplateId = template.id;
+  state.scratchWorkflowMode = false;
+  const tasks = workflowTasksForTemplate(template.id);
   const dependencies = defaultWorkflowDependencies(tasks);
+  $("#workflowDialogTitle").textContent = `Generate ${template.name}`;
+  $("#workflowDialogSubtitle").textContent = "Create operational tasks and adjust dependency logic before tickets are generated.";
+  $("#workflowNameField").classList.add("hidden");
+  $("#workflowScratchTasksField").classList.add("hidden");
   $("#workflowPreview").innerHTML = tasks.map((task) => workflowTaskPreview(task, tasks, dependencies)).join("");
   $("#workflowDependencies").innerHTML = workflowDependencyEditor(tasks, dependencies);
   setTicketDefaults();
   $("#workflowDialog").showModal();
+}
+
+function openScratchWorkflowDialog() {
+  state.selectedWorkflowTemplateId = null;
+  state.scratchWorkflowMode = true;
+  $("#workflowDialogTitle").textContent = "Create Workflow from Scratch";
+  $("#workflowDialogSubtitle").textContent = "Type the tasks, then choose which steps depend on earlier steps.";
+  $("#workflowNameField").classList.remove("hidden");
+  $("#workflowScratchTasksField").classList.remove("hidden");
+  $("#workflowName").value = "";
+  $("#workflowScratchTasks").value = "Intake and confirm scope\nDelivery review - Check feasibility, risks, and handoff readiness\nCustomer follow-up - Confirm customer-owned dependencies\nFinal review - Confirm everything is complete";
+  renderScratchWorkflowPreview();
+  setTicketDefaults();
+  $("#workflowDialog").showModal();
+}
+
+function renderScratchWorkflowPreview() {
+  if (!state.scratchWorkflowMode) return;
+  const tasks = scratchWorkflowTasks();
+  const dependencies = defaultWorkflowDependencies(tasks);
+  $("#workflowPreview").innerHTML = tasks.map((task) => workflowTaskPreview(task, tasks, dependencies)).join("");
+  $("#workflowDependencies").innerHTML = workflowDependencyEditor(tasks, dependencies);
 }
 
 function workflowTasksForTemplate(templateId) {
@@ -1308,11 +1364,35 @@ function workflowTasksForTemplate(templateId) {
     .sort((a, b) => a.position - b.position);
 }
 
+function scratchWorkflowTasks() {
+  return $("#workflowScratchTasks").value
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line, index) => {
+      const [title, ...descriptionParts] = line.split(" - ");
+      return {
+        id: `scratch-${index + 1}`,
+        title: title.trim(),
+        description: descriptionParts.join(" - ").trim() || null,
+        default_ticket_type: "task",
+        default_priority: "medium",
+        default_blocked_reason: null,
+        position: index + 1,
+        suggested_due_offset_days: index * 2,
+        is_scratch: true,
+      };
+    });
+}
+
 function defaultWorkflowDependencies(tasks) {
   const byPosition = Object.fromEntries(tasks.map((task) => [task.position, task.id]));
+  const finalPosition = Math.max(...tasks.map((task) => task.position), 0);
   return Object.fromEntries(tasks.map((task) => {
     if (task.position === 1) return [task.id, []];
-    if (task.position === 6) return [task.id, [2, 3, 4, 5].map((position) => byPosition[position]).filter(Boolean)];
+    if (task.position === finalPosition && finalPosition > 2) {
+      return [task.id, tasks.filter((candidate) => candidate.position > 1 && candidate.position < finalPosition).map((candidate) => candidate.id)];
+    }
     return [task.id, byPosition[1] ? [byPosition[1]] : []];
   }));
 }
@@ -1376,9 +1456,9 @@ function dependencyLabels(taskId, tasks, dependencies) {
 
 async function startWorkflow(event) {
   event.preventDefault();
-  const template = state.templates.find((item) => item.slug === "new-sow");
-  if (!template) return;
-  const tasks = workflowTasksForTemplate(template.id);
+  const template = state.scratchWorkflowMode ? null : findById(state.templates, state.selectedWorkflowTemplateId);
+  const tasks = state.scratchWorkflowMode ? scratchWorkflowTasks() : workflowTasksForTemplate(template?.id);
+  if (!tasks.length) return;
   const dependencies = workflowDependencySelection(tasks);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
   const waitingStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "Waiting") || newStage;
@@ -1394,8 +1474,8 @@ async function startWorkflow(event) {
     const [run] = await api("/workflow_runs", {
       method: "POST",
       body: {
-        template_id: template.id,
-        name: `${customer?.name || "Customer"} New SOW Workflow`,
+        template_id: template?.id || null,
+        name: workflowRunName(template, customer),
         customer_name: customer?.name || null,
         opportunity_reference: workflowOpportunityWithDependencies($("#workflowOpportunity").value.trim(), dependencySummary),
         started_by: state.user.id,
@@ -1438,7 +1518,7 @@ async function startWorkflow(event) {
         body: {
           workflow_run_id: run.id,
           ticket_id: ticket.id,
-          template_task_id: task.id,
+          template_task_id: task.is_scratch ? null : task.id,
         },
       });
     }
@@ -1446,11 +1526,20 @@ async function startWorkflow(event) {
     $("#workflowForm").reset();
     syncObjectSelects();
     $("#workflowDialog").close();
+    state.selectedWorkflowTemplateId = null;
+    state.scratchWorkflowMode = false;
     await loadData();
     switchView("tickets");
   } catch (error) {
     setSync(error.message);
   }
+}
+
+function workflowRunName(template, customer) {
+  if (state.scratchWorkflowMode) {
+    return $("#workflowName").value.trim() || `${customer?.name || "Customer"} Custom Workflow`;
+  }
+  return `${customer?.name || "Customer"} ${template?.name || "Workflow"}`;
 }
 
 function workflowTaskDescription(task, dependencyLabelsForTask) {

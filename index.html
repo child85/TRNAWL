@@ -120,18 +120,20 @@
       <form id="workflowForm" method="dialog" class="modal-form">
         <div class="modal-header">
           <div>
-            <h2>Generate New SOW Workflow</h2>
-            <p>Create the operational review tasks and set dependency logic before tickets are generated.</p>
+            <h2 id="workflowDialogTitle">Generate Workflow</h2>
+            <p id="workflowDialogSubtitle">Create operational tasks and set dependency logic before tickets are generated.</p>
           </div>
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="form-grid">
+          <label id="workflowNameField" class="span-2 hidden">Workflow name<input id="workflowName" placeholder="Customer onboarding review" /></label>
           <label>Customer<select id="workflowCustomer" required></select></label>
           <label>Opportunity reference<input id="workflowOpportunity" placeholder="Optional" /></label>
           <label>Owner<select id="workflowOwner"></select></label>
           <label>Delivery Lead<select id="workflowDeliveryLead"></select></label>
           <label>Sales Lead<select id="workflowSalesLead"></select></label>
           <label>First due date<input id="workflowDueDate" type="date" /></label>
+          <label id="workflowScratchTasksField" class="span-2 hidden">Tasks<textarea id="workflowScratchTasks" rows="5" placeholder="One task per line. Use: Task title - optional description"></textarea></label>
         </div>
         <div id="workflowPreview" class="preview-list"></div>
         <div id="workflowDependencies" class="workflow-dependencies"></div>

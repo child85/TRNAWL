@@ -583,6 +583,10 @@ th {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
 }
 
+.workflow-task-panel {
+  margin-top: 16px;
+}
+
 .customer-tile-grid {
   grid-template-columns: repeat(3, minmax(240px, 1fr));
 }

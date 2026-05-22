@@ -273,3 +273,14 @@ Changed:
 - Task cards now show Owner only.
 - Delivery Lead remains visible only for ticket types that actually use delivery governance.
 - Kept ticket detail responsibility aligned with the type rules.
+
+### Workflow Generation Expansion
+
+Made every workflow card executable and added custom workflow creation from scratch.
+
+Changed:
+
+- Added a Workflow from Scratch button.
+- Added custom workflow name and task entry in the generator.
+- Changed Customer Action Follow-Up and Delivery Review Workflow from Ready labels to Generate Workflow buttons.
+- Added real template tasks for the two previously placeholder workflows.
