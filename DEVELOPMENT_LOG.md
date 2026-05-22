@@ -127,3 +127,15 @@ Changed:
 - Reduced heavy shadows on panels, cards, and toolbar areas.
 - Shifted warning and priority states away from yellow.
 - Updated demo user colors to a cooler business palette.
+
+### Ticket Detail Focus Cleanup
+
+Refocused ticket details on updates and history instead of recreating the create-ticket form.
+
+Changed:
+
+- Moved updates and history into the primary ticket detail area.
+- Made ticket facts more compact.
+- Kept Owner visible with a Take ownership action.
+- Locked customer, lead, and blocker settings behind a small Edit control.
+- Kept rare context changes available without making them feel like daily ticket fields.

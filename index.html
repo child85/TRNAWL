@@ -152,35 +152,48 @@
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
         <div class="ticket-detail-layout">
+          <aside class="detail-side detail-updates">
+            <h3>Updates & history</h3>
+            <div id="ticketCommentsList" class="comments-list"></div>
+            <label class="note-label">Add update<textarea id="ticketCommentText" rows="5" placeholder="What changed, what is blocked, or what needs attention?"></textarea></label>
+          </aside>
           <section class="detail-main">
-            <div class="form-grid">
+            <div class="compact-ticket-fields">
               <label class="span-2">Title<input id="ticketDetailTitleInput" required /></label>
-              <label class="span-2">Description<textarea id="ticketDetailDescription" rows="5"></textarea></label>
+              <label class="span-2">Description<textarea id="ticketDetailDescription" rows="3"></textarea></label>
               <label>Type<select id="ticketDetailType"></select></label>
               <label>Priority<select id="ticketDetailPriority"></select></label>
-              <label class="detail-delivery-field">Delivery Lead<select id="ticketDetailDeliveryLead"></select></label>
-              <label class="detail-sales-field">Sales Lead<select id="ticketDetailSalesLead"></select></label>
-              <label class="detail-customer-field">Customer<select id="ticketDetailCustomer"></select></label>
               <label>Due date<input id="ticketDetailDueDate" type="date" /></label>
               <label>Status<select id="ticketDetailStatus"></select></label>
-              <label>Blocked reason<select id="ticketDetailBlockedReason"></select></label>
             </div>
             <fieldset id="ticketDetailReadinessFieldset" class="readiness-fieldset">
               <legend>Readiness checks</legend>
               <p id="ticketDetailReadinessHelp" class="fieldset-note"></p>
               <div id="ticketDetailReadinessOptions" class="readiness-options"></div>
             </fieldset>
-            <section class="assignment-panel">
+            <section class="stable-settings">
+              <div class="stable-settings-header">
+                <div>
+                  <h3>Settings</h3>
+                  <p>Customer, lead, and blocker changes are uncommon. Edit only when the ticket context changes.</p>
+                </div>
+                <button class="secondary-button compact-button" type="button" id="toggleTicketSettingsButton">Edit</button>
+              </div>
+              <div class="settings-grid">
+                <label class="detail-delivery-field">Delivery Lead<select id="ticketDetailDeliveryLead"></select></label>
+                <label class="detail-sales-field">Sales Lead<select id="ticketDetailSalesLead"></select></label>
+                <label class="detail-customer-field">Customer<select id="ticketDetailCustomer"></select></label>
+                <label>Blocked reason<select id="ticketDetailBlockedReason"></select></label>
+              </div>
+            </section>
+            <section class="assignment-panel assignment-compact">
               <h3>Assignment</h3>
-              <p>Owner changes should be deliberate. Use this when the work actually moves to someone else.</p>
-              <label>Owner<select id="ticketDetailOwner"></select></label>
+              <div class="assignment-row">
+                <label>Owner<select id="ticketDetailOwner"></select></label>
+                <button class="secondary-button" type="button" id="takeOwnershipButton">Take ownership</button>
+              </div>
             </section>
           </section>
-          <aside class="detail-side">
-            <h3>Updates</h3>
-            <div id="ticketCommentsList" class="comments-list"></div>
-            <label class="note-label">Add update<textarea id="ticketCommentText" rows="4" placeholder="What changed, what is blocked, or what needs attention?"></textarea></label>
-          </aside>
         </div>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Close</button>

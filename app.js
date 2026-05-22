@@ -15,6 +15,7 @@ const state = {
   customers: [],
   selectedCustomerId: null,
   selectedTicketId: null,
+  ticketSettingsUnlocked: false,
   search: "",
   typeFilter: "all",
   ownerFilter: "me",
@@ -168,6 +169,18 @@ const developmentLog = [
     ],
     notes: ["The design now leans more toward clean TÜV-style blue, white, and light gray."],
   },
+  {
+    date: "2026-05-22",
+    title: "Ticket detail focus cleanup",
+    summary: "Refocused ticket details on updates and history instead of recreating the create-ticket form.",
+    changes: [
+      "Moved updates and history into the primary detail area.",
+      "Made ticket facts more compact.",
+      "Kept Owner visible with a Take ownership action.",
+      "Locked customer, lead, and blocker settings behind a small Edit control.",
+    ],
+    notes: ["Rare ticket context changes now feel deliberate without hiding them."],
+  },
 ];
 
 const ticketTypes = [
@@ -294,6 +307,8 @@ function bindEvents() {
   $("#ticketDetailType").addEventListener("change", applyTicketDetailRules);
   $("#ticketDetailCustomer").addEventListener("change", () => applyTicketDetailCustomerDefaults(true));
   $("#addTicketCommentButton").addEventListener("click", addTicketComment);
+  $("#toggleTicketSettingsButton").addEventListener("click", toggleTicketSettings);
+  $("#takeOwnershipButton").addEventListener("click", takeTicketOwnership);
   $("#workflowForm").addEventListener("submit", startWorkflow);
   $("#workflowCustomer").addEventListener("change", applyWorkflowCustomerDefaults);
   $("#customerForm").addEventListener("submit", createCustomer);
@@ -393,6 +408,32 @@ function applyTicketDetailRules() {
   toggleFormField(".detail-customer-field", rules.customer);
   applyTicketDetailCustomerDefaults();
   renderDetailReadinessChecks();
+  applyTicketSettingsLock();
+}
+
+function toggleTicketSettings() {
+  state.ticketSettingsUnlocked = !state.ticketSettingsUnlocked;
+  applyTicketSettingsLock();
+}
+
+function applyTicketSettingsLock() {
+  const unlocked = state.ticketSettingsUnlocked;
+  const button = $("#toggleTicketSettingsButton");
+  if (button) {
+    button.textContent = unlocked ? "Lock" : "Edit";
+    button.setAttribute("aria-pressed", String(unlocked));
+  }
+  $(".stable-settings")?.classList.toggle("is-locked", !unlocked);
+  $$(".stable-settings select, .stable-settings input, .stable-settings textarea").forEach((control) => {
+    const field = control.closest("label");
+    control.disabled = !unlocked || Boolean(field?.classList.contains("hidden"));
+  });
+}
+
+function takeTicketOwnership() {
+  const currentUser = getCurrentPerson();
+  if (!currentUser) return;
+  $("#ticketDetailOwner").value = currentUser.id;
 }
 
 function applyTicketDetailCustomerDefaults(force = false) {
@@ -831,6 +872,7 @@ function openTicketDetails(ticketId) {
   const ticket = findById(state.tickets, ticketId);
   if (!ticket) return;
   state.selectedTicketId = ticketId;
+  state.ticketSettingsUnlocked = false;
   const stage = findById(state.stages, ticket.status_stage_id);
   const rules = ticketTypeRules[ticket.ticket_type] || ticketTypeRules.task;
   $("#ticketDetailTitle").textContent = ticket.title;

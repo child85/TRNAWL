@@ -891,33 +891,118 @@ th {
 
 .ticket-detail-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 0.6fr);
+  grid-template-columns: minmax(320px, 0.86fr) minmax(0, 1.14fr);
   gap: 16px;
   margin-top: 16px;
+}
+
+.detail-main {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+}
+
+.compact-ticket-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.compact-ticket-fields label,
+.settings-grid label,
+.assignment-row label {
+  gap: 6px;
+}
+
+.compact-ticket-fields input,
+.compact-ticket-fields select,
+.compact-ticket-fields textarea,
+.settings-grid select,
+.assignment-row select {
+  min-height: 42px;
+  padding: 10px 12px;
 }
 
 .assignment-panel {
   border: 1px solid var(--line);
   border-radius: 3px;
   background: #fbfdff;
-  padding: 14px;
-  margin-top: 14px;
+  padding: 12px;
 }
 
 .assignment-panel h3 {
-  margin: 0 0 4px;
+  margin: 0;
   color: var(--navy);
 }
 
-.assignment-panel p {
-  margin: 0 0 12px;
+.assignment-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.stable-settings {
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #fbfdff;
+  padding: 12px;
+}
+
+.stable-settings.is-locked {
+  background: #f8fbff;
+}
+
+.stable-settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.stable-settings-header h3 {
+  margin: 0;
+  color: var(--navy);
+}
+
+.stable-settings-header p {
+  margin: 3px 0 0;
   color: var(--muted);
-  font-size: 13px;
+  font-size: 12px;
+}
+
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.stable-settings select:disabled,
+.stable-settings input:disabled,
+.stable-settings textarea:disabled {
+  color: var(--text);
+  background: #eef4fa;
+  border-color: #d7e2eb;
+  opacity: 1;
+}
+
+.compact-button {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
 }
 
 .detail-side {
-  border-left: 1px solid var(--line);
-  padding-left: 16px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  background: #ffffff;
+  padding: 14px;
+}
+
+.detail-updates {
+  box-shadow: 0 10px 24px rgba(0, 55, 100, 0.08);
 }
 
 .detail-side h3 {
@@ -928,7 +1013,7 @@ th {
 .comments-list {
   display: grid;
   gap: 8px;
-  max-height: 280px;
+  max-height: 440px;
   overflow-y: auto;
 }
 
@@ -1015,6 +1100,8 @@ th {
   .customer-info-grid,
   .capacity-layout,
   .ticket-detail-layout,
+  .compact-ticket-fields,
+  .settings-grid,
   .form-grid,
   .calendar-filters,
   .readiness-options {
@@ -1026,10 +1113,11 @@ th {
   }
 
   .detail-side {
-    border-left: none;
-    border-top: 1px solid var(--line);
-    padding-left: 0;
-    padding-top: 16px;
+    padding: 12px;
+  }
+
+  .assignment-row {
+    grid-template-columns: 1fr;
   }
 
   .detail-header {
