@@ -317,6 +317,17 @@ const developmentLog = [
     ],
     notes: ["This is a visual cleanup only."],
   },
+  {
+    date: "2026-05-22",
+    title: "Task card responsibility cleanup",
+    summary: "Stopped task cards from showing Delivery Lead when the ticket type does not use a lead.",
+    changes: [
+      "Task cards now show Owner only.",
+      "Delivery Lead remains visible only for ticket types that actually use delivery governance.",
+      "Kept ticket detail responsibility aligned with the type rules.",
+    ],
+    notes: ["Generic tasks should stay ownership-focused."],
+  },
 ];
 
 const ticketTypes = [
@@ -963,11 +974,16 @@ function ticketCard(ticket) {
         <span class="pill primary">${labelFor(ticketTypes, ticket.ticket_type)}</span>
         ${ticketPills(ticket)}
         <span class="pill">Owner: ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span>
-        ${ticket.delivery_lead_name ? `<span class="pill">Delivery: ${escapeHtml(ticket.delivery_lead_name)}</span>` : ""}
+        ${shouldShowDeliveryPill(ticket) ? `<span class="pill">Delivery: ${escapeHtml(ticket.delivery_lead_name)}</span>` : ""}
       </div>
       <button class="secondary-button ticket-detail-button" type="button" data-ticket-id="${ticket.id}">Details</button>
     </article>
   `;
+}
+
+function shouldShowDeliveryPill(ticket) {
+  const rules = ticketTypeRules[ticket.ticket_type] || ticketTypeRules.task;
+  return Boolean(rules.deliveryLead && ticket.delivery_lead_name);
 }
 
 function ticketPills(ticket) {

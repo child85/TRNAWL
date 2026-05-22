@@ -263,3 +263,13 @@ Changed:
 - Added a dedicated ticket toolbar layout.
 - Kept filters aligned in one row on desktop.
 - Preserved mobile wrapping for narrow screens.
+
+### Task Card Responsibility Cleanup
+
+Stopped task cards from showing Delivery Lead when the ticket type does not use a lead.
+
+Changed:
+
+- Task cards now show Owner only.
+- Delivery Lead remains visible only for ticket types that actually use delivery governance.
+- Kept ticket detail responsibility aligned with the type rules.
