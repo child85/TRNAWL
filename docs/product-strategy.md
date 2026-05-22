@@ -91,6 +91,62 @@ The most valuable feature is workflows.
 
 Workflows capture organizational experience and turn it into repeatable execution logic. A New SOW Workflow should create the minimum review tasks needed to move from intake to customer-ready delivery plan without forgotten handoffs.
 
+## Near-Term Product Additions
+
+### Operational Readiness Score
+
+Each SOW or delivery workflow should show a lightweight readiness score based on visible checks:
+
+- Delivery reviewed
+- Pricing reviewed
+- Scope boundaries clear
+- Owner assigned
+- Customer dependencies listed
+- Due dates realistic
+
+The first version can be rule-based. AI can later explain why a score is weak and suggest what is missing.
+
+### Blocked Because
+
+Every blocked ticket should use a controlled reason so reports become useful:
+
+- Waiting for delivery
+- Waiting for pricing
+- Waiting for legal
+- Waiting for customer
+- Scope unclear
+- Owner missing
+- Dependency unresolved
+- Approval pending
+
+This is low-friction for users and high-value for operations.
+
+### Customer Action Register
+
+Customer-owned actions need a dedicated view because they often disappear in email or meeting notes.
+
+The register should track:
+
+- Customer
+- Action
+- Customer owner
+- Internal accountable person
+- Due date
+- Status
+- Days waiting
+
+### Weekly Operational Brief
+
+TRNAWL should generate a weekly brief from real data:
+
+- SOWs waiting for delivery review
+- Pricing reviews overdue
+- Customer actions stale
+- Owners overloaded next week
+- Tickets blocked by unclear scope
+
+This should be management-ready, but short.
+
 ## Calendar Direction
 
 The calendar should not become MS Project or heavy resource forecasting.
@@ -110,7 +166,10 @@ Simple operational tracker for internal use:
 - Ticket board
 - Owners
 - Due dates
+- Blocked reasons
 - Delivery review workflow
+- New SOW workflow
+- Customer action register
 - AI ticket enrichment
 - Basic dashboard
 
@@ -121,6 +180,8 @@ Cross-team coordination:
 - Workflow templates
 - Team capacity calendar
 - Reports
+- Readiness scores
+- Weekly operational briefs
 - Saved views
 - Teams and Outlook capture
 

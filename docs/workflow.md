@@ -34,6 +34,62 @@ Suggested generated tasks:
 
 Each task should have an owner, due date, status, and blocker field. The workflow should make missing handoffs visible without forcing a heavy project plan.
 
+## Blocked Reasons
+
+Blocked tickets should use a controlled reason so the dashboard and reports can show where work is stuck.
+
+Suggested reasons:
+
+- Waiting for delivery
+- Waiting for pricing
+- Waiting for legal
+- Waiting for customer
+- Scope unclear
+- Owner missing
+- Dependency unresolved
+- Approval pending
+- Other
+
+## Operational Readiness Checks
+
+SOW and delivery work should expose a simple readiness view:
+
+- Delivery reviewed
+- Pricing reviewed
+- Scope boundaries clear
+- Owner assigned
+- Customer dependencies listed
+- Due dates realistic
+
+The first version can store these as checklist fields and calculate a simple readiness score.
+
+## Customer Action Register
+
+Customer actions should be tracked separately from internal tasks when the customer owns the next move.
+
+Each customer action should capture:
+
+- Customer
+- Action
+- Customer owner
+- Internal accountable owner
+- Due date
+- Status
+- Last follow-up date
+
+This keeps external dependencies visible without pretending they are internally owned tickets.
+
+## Weekly Operational Brief
+
+The weekly brief should summarize execution visibility:
+
+- overdue tickets
+- delayed delivery reviews
+- stale customer actions
+- blocked reason trends
+- overloaded owners
+- unclear scope or missing approvals
+
 ## Reminder Rules
 
 Initial reminder behavior should be simple:

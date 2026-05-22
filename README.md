@@ -33,6 +33,10 @@ TRNAWL provides a Jira-like board where useful, but avoids Jira-like complexity.
 - Templates and configurable workflows for repeatable delivery processes
 - Lightweight governance checks for pricing, scope, legal, delivery, and customer handoffs
 - Team capacity visibility for simple operational planning
+- Operational readiness scores for SOWs and delivery work
+- Blocked reason tracking with useful reporting categories
+- Customer action register with internal accountability
+- Weekly operational briefs for stale work, delayed reviews, and overloaded owners
 
 ## AI-Assisted Ticket Enrichment
 
@@ -65,6 +69,21 @@ Workflows capture organizational experience:
 - What operational risks should be visible early
 
 Example: a **New SOW Workflow** can automatically create delivery review, pricing review, legal review, scope boundary review, and customer deck review tasks. This turns repeated tribal knowledge into a repeatable operating model.
+
+## Operational Readiness
+
+TRNAWL should make readiness visible without becoming a checklist monster.
+
+Each SOW or delivery workflow should be able to show whether the basics are covered:
+
+- Delivery reviewed
+- Pricing reviewed
+- Scope boundaries clear
+- Owner assigned
+- Customer dependencies listed
+- Due dates realistic
+
+This can start as a simple score and checklist, then become smarter as AI governance matures.
 
 ## Delivery Review Workflow
 
@@ -110,12 +129,15 @@ The MVP should focus on a narrow, useful workflow:
 - Set due dates and priorities
 - Move tickets across workflow stages
 - Filter by owner, status, due date, and priority
+- Track blocked reasons such as delivery input, pricing, legal, customer dependency, unclear scope, missing owner, unresolved dependency, or pending approval
 - Show overdue and upcoming work
 - Support basic delivery review stages
 - Provide an **Improve with AI** review step before ticket submission
 - Offer a simple dashboard for operational visibility
 - Provide a New SOW workflow template that creates the minimum operational review tasks
 - Include a simple team capacity calendar focused on who is blocked, reserved, or overloaded
+- Include a customer action register
+- Generate a weekly operational brief from overdue work, stale actions, delayed reviews, and capacity pressure
 
 ## Future Roadmap
 
@@ -133,6 +155,9 @@ The MVP should focus on a narrow, useful workflow:
 - AI-generated summaries, risks, and next steps
 - Teams and Outlook ticket capture
 - Customer health dashboard
+- Operational readiness score trends
+- Blocked reason aging analytics
+- AI weekly operational brief generation
 - API and webhook support
 
 ## Project Structure

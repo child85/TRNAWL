@@ -24,3 +24,15 @@ ANTHROPIC_API_KEY=
 Apply migrations with the Supabase CLI or a direct Postgres connection.
 
 The publishable and secret API keys can call Supabase APIs, but they cannot create tables. Schema changes require database credentials.
+
+## Current Schema Direction
+
+The database starts with:
+
+- ticket board tables
+- workflow stages
+- workflow templates
+- New SOW workflow task templates
+- customer action register
+- operational brief storage
+- readiness and blocker fields on tickets
