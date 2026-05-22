@@ -295,3 +295,13 @@ Changed:
 - Added owner scope so users can report only their own work.
 - Added selectable report data points.
 - Added a generated brief preview with live ticket and customer-action data.
+
+### Customer Action Defaults
+
+Made customer action creation prefill obvious ownership and due date defaults.
+
+Changed:
+
+- Preselected the customer owner from the selected customer's Sales Lead.
+- Updated the customer owner when the selected customer changes.
+- Defaulted new customer actions to three days from today.

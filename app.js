@@ -357,6 +357,17 @@ const developmentLog = [
     ],
     notes: ["Reports are generated in-browser for the MVP."],
   },
+  {
+    date: "2026-05-22",
+    title: "Customer action defaults",
+    summary: "Made customer action creation prefill obvious ownership and due date defaults.",
+    changes: [
+      "Preselected the customer owner from the selected customer's Sales Lead.",
+      "Updated the customer owner when the selected customer changes.",
+      "Defaulted new customer actions to three days from today.",
+    ],
+    notes: ["This keeps customer follow-up creation fast while still editable."],
+  },
 ];
 
 const ticketTypes = [
@@ -500,6 +511,7 @@ function bindEvents() {
   $("#customerForm").addEventListener("submit", createCustomer);
   $("#customerEditForm").addEventListener("submit", updateCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
+  $("#actionCustomer").addEventListener("change", applyActionCustomerDefaults);
   $("#personForm").addEventListener("submit", createPerson);
 
   $$(".close-dialog").forEach((button) => {
@@ -1813,7 +1825,20 @@ function renderCustomerActions() {
       ${state.customerActions.map(actionItem).join("") || `<div class="empty-state">No customer actions yet.</div>`}
     </div>
   `;
-  $("#addActionButton").addEventListener("click", () => $("#actionDialog").showModal());
+  $("#addActionButton").addEventListener("click", openActionDialog);
+}
+
+function openActionDialog() {
+  $("#actionForm").reset();
+  $("#actionStatus").value = "open";
+  $("#actionDueDate").value = isoDateFromToday(3);
+  applyActionCustomerDefaults();
+  $("#actionDialog").showModal();
+}
+
+function applyActionCustomerDefaults() {
+  const customer = findById(state.customers, $("#actionCustomer").value);
+  $("#actionCustomerOwner").value = customer?.sales_lead_name || "";
 }
 
 function actionItem(action) {
@@ -1846,6 +1871,9 @@ async function createCustomerAction(event) {
       },
     });
     $("#actionForm").reset();
+    $("#actionStatus").value = "open";
+    $("#actionDueDate").value = isoDateFromToday(3);
+    applyActionCustomerDefaults();
     $("#actionDialog").close();
     await loadData();
   } catch (error) {
