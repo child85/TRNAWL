@@ -208,3 +208,14 @@ Changed:
 - Moved Blocked reason into the compact ticket fields.
 - Removed the separate Assignment panel from ticket details.
 - Kept stable context settings focused on customer and lead fields only.
+
+### Calendar Search Dropdowns
+
+Changed calendar booking task and customer results into click-to-open dropdown lists.
+
+Changed:
+
+- Search results are hidden until the task or customer field is focused.
+- Task and customer results now open as dropdowns under their search fields.
+- Selecting a result closes the dropdown.
+- Clicking outside the booking search closes open dropdowns.

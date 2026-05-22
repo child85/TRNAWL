@@ -846,11 +846,28 @@ th {
   gap: 10px;
 }
 
+.booking-search-section {
+  position: relative;
+}
+
 .booking-results {
-  display: grid;
+  display: none;
   gap: 8px;
-  max-height: 230px;
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 260px;
   overflow-y: auto;
+  border: 1px solid var(--line);
+  background: #fff;
+  box-shadow: 0 16px 32px rgba(0, 55, 100, 0.16);
+  padding: 8px;
+}
+
+.booking-results.open {
+  display: grid;
 }
 
 .booking-result {

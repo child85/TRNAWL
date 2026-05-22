@@ -16,6 +16,7 @@ const state = {
   selectedCustomerId: null,
   selectedTicketId: null,
   ticketSettingsUnlocked: false,
+  activeBookingDropdown: null,
   search: "",
   typeFilter: "all",
   ownerFilter: "me",
@@ -256,6 +257,18 @@ const developmentLog = [
     ],
     notes: ["Owner and blocker status are regular working fields, not rare settings."],
   },
+  {
+    date: "2026-05-22",
+    title: "Calendar search dropdowns",
+    summary: "Changed calendar booking task and customer results into click-to-open dropdown lists.",
+    changes: [
+      "Search results are hidden until the task or customer field is focused.",
+      "Task and customer results now open as dropdowns under their search fields.",
+      "Selecting a result closes the dropdown.",
+      "Clicking outside the booking search closes open dropdowns.",
+    ],
+    notes: ["The booking dialog now stays compact until the user searches."],
+  },
 ];
 
 const ticketTypes = [
@@ -384,11 +397,14 @@ function bindEvents() {
   $("#addTicketCommentButton").addEventListener("click", addTicketComment);
   $("#toggleTicketSettingsButton").addEventListener("click", toggleTicketSettings);
   $("#calendarReservationForm").addEventListener("submit", saveCalendarReservation);
-  $("#calendarBookingTaskSearch").addEventListener("input", renderCalendarBookingOptions);
-  $("#calendarBookingCustomerSearch").addEventListener("input", renderCalendarBookingOptions);
+  $("#calendarBookingTaskSearch").addEventListener("input", () => showCalendarBookingDropdown("task"));
+  $("#calendarBookingCustomerSearch").addEventListener("input", () => showCalendarBookingDropdown("customer"));
+  $("#calendarBookingTaskSearch").addEventListener("focus", () => showCalendarBookingDropdown("task"));
+  $("#calendarBookingCustomerSearch").addEventListener("focus", () => showCalendarBookingDropdown("customer"));
   $("#calendarBookingDays").addEventListener("input", updateCalendarBookingSummary);
   $("#calendarBookingTaskResults").addEventListener("click", selectCalendarBookingTask);
   $("#calendarBookingCustomerResults").addEventListener("click", selectCalendarBookingCustomer);
+  $("#calendarReservationDialog").addEventListener("click", closeCalendarBookingDropdownOnOutsideClick);
   $("#workflowForm").addEventListener("submit", startWorkflow);
   $("#workflowCustomer").addEventListener("change", applyWorkflowCustomerDefaults);
   $("#customerForm").addEventListener("submit", createCustomer);
@@ -1647,8 +1663,25 @@ function openCalendarReservationDialog(personId, date) {
   $("#calendarBookingTaskSearch").value = "";
   $("#calendarBookingCustomerSearch").value = "";
   $("#calendarBookingNote").value = "";
+  state.activeBookingDropdown = null;
   renderCalendarBookingOptions();
   $("#calendarReservationDialog").showModal();
+}
+
+function showCalendarBookingDropdown(type) {
+  state.activeBookingDropdown = type;
+  renderCalendarBookingOptions();
+}
+
+function hideCalendarBookingDropdown() {
+  state.activeBookingDropdown = null;
+  renderCalendarBookingOptions();
+}
+
+function closeCalendarBookingDropdownOnOutsideClick(event) {
+  if (!event.target.closest(".booking-search-section")) {
+    hideCalendarBookingDropdown();
+  }
 }
 
 function renderCalendarBookingOptions() {
@@ -1672,6 +1705,8 @@ function renderCalendarBookingOptions() {
     .slice(0, 6);
   $("#calendarBookingTaskResults").innerHTML = taskMatches.map(calendarBookingTaskOption).join("") || `<div class="empty-state compact-empty">No tasks found.</div>`;
   $("#calendarBookingCustomerResults").innerHTML = customerMatches.map(calendarBookingCustomerOption).join("") || `<div class="empty-state compact-empty">No customers found.</div>`;
+  $("#calendarBookingTaskResults").classList.toggle("open", state.activeBookingDropdown === "task");
+  $("#calendarBookingCustomerResults").classList.toggle("open", state.activeBookingDropdown === "customer");
   updateCalendarBookingSummary();
 }
 
@@ -1716,7 +1751,7 @@ function selectCalendarBookingTask(event) {
     state.pendingCalendarReservation.customerId = customer.id;
     $("#calendarBookingCustomerSearch").value = customer.name;
   }
-  renderCalendarBookingOptions();
+  hideCalendarBookingDropdown();
 }
 
 function selectCalendarBookingCustomer(event) {
@@ -1726,7 +1761,7 @@ function selectCalendarBookingCustomer(event) {
   if (!customer) return;
   state.pendingCalendarReservation.customerId = customer.id;
   $("#calendarBookingCustomerSearch").value = customer.name;
-  renderCalendarBookingOptions();
+  hideCalendarBookingDropdown();
 }
 
 function updateCalendarBookingSummary() {
