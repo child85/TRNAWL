@@ -931,6 +931,50 @@ th {
   font-size: 13px;
 }
 
+.blocked-tile-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.blocked-ticket-tile {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  border: 1px solid #efb1ae;
+  border-left: 5px solid var(--danger);
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--danger-soft), #ffffff 72%);
+  color: var(--text);
+  padding: 12px;
+  text-align: left;
+}
+
+.blocked-ticket-tile:hover {
+  border-color: var(--danger);
+  background: #fff3f3;
+  transform: translateY(-1px);
+}
+
+.blocked-ticket-tile strong {
+  color: var(--navy);
+  line-height: 1.25;
+}
+
+.blocked-ticket-tile span,
+.blocked-ticket-tile small {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.blocked-reason-label {
+  color: var(--danger) !important;
+  font-size: 11px !important;
+  font-weight: 900 !important;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
 .empty-state {
   color: var(--muted);
   border: 1px dashed #a7bdd2;

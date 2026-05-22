@@ -207,6 +207,18 @@ const developmentLog = [
     ],
     notes: ["Existing local bookings can now be removed from the calendar."],
   },
+  {
+    date: "2026-05-22",
+    title: "Blocked ticket tiles",
+    summary: "Changed blocked reason summaries into highlighted clickable blocked-ticket tiles.",
+    changes: [
+      "Replaced blocked reason count rows with ticket-specific blocker tiles.",
+      "Each blocker tile now opens the ticket detail view.",
+      "Tiles show blocked reason, ticket title, owner, due date, and customer context.",
+      "Added stronger blocker highlighting on dashboard and reports.",
+    ],
+    notes: ["Blockers are now treated as escalation work, not passive report text."],
+  },
 ];
 
 const ticketTypes = [
@@ -760,10 +772,22 @@ function ticketTable(tickets) {
 }
 
 function blockedReasonList() {
-  const counts = countBy(state.tickets.filter((ticket) => ticket.blocked_reason), "blocked_reason");
-  const rows = Object.entries(counts);
-  if (!rows.length) return `<div class="empty-state">No blocked tickets.</div>`;
-  return `<div class="mini-list">${rows.map(([reason, count]) => `<div><strong>${labelFor(blockedReasons, reason)}</strong><br><span class="muted">${count} ticket${count === 1 ? "" : "s"}</span></div>`).join("")}</div>`;
+  const blockedTickets = state.tickets
+    .filter((ticket) => ticket.blocked_reason)
+    .sort((a, b) => daysUntil(a.due_date) - daysUntil(b.due_date));
+  if (!blockedTickets.length) return `<div class="empty-state">No blocked tickets.</div>`;
+  return `<div class="blocked-tile-grid">${blockedTickets.map(blockedTicketTile).join("")}</div>`;
+}
+
+function blockedTicketTile(ticket) {
+  return `
+    <button class="blocked-ticket-tile ticket-detail-button" type="button" data-ticket-id="${ticket.id}">
+      <span class="blocked-reason-label">${escapeHtml(labelFor(blockedReasons, ticket.blocked_reason))}</span>
+      <strong>${escapeHtml(ticket.title)}</strong>
+      <span>${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")} · due ${escapeHtml(formatDate(ticket.due_date))}</span>
+      ${ticket.customer_name ? `<small>${escapeHtml(ticket.customer_name)}</small>` : ""}
+    </button>
+  `;
 }
 
 function renderTickets() {
@@ -1829,6 +1853,7 @@ function renderReports() {
       </section>
     </div>
   `;
+  bindTicketDetailButtons();
 }
 
 function renderDevLog() {

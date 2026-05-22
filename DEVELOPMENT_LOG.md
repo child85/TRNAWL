@@ -163,3 +163,14 @@ Changed:
 - Added a note field to the calendar booking dialog.
 - Saving a booking now creates a task when no existing task is selected.
 - Booking notes are saved to the linked or newly created ticket.
+
+### Blocked Ticket Tiles
+
+Changed blocked reason summaries into highlighted clickable blocked-ticket tiles.
+
+Changed:
+
+- Replaced blocked reason count rows with ticket-specific blocker tiles.
+- Each blocker tile opens the ticket detail view.
+- Tiles show blocked reason, ticket title, owner, due date, and customer context.
+- Added stronger blocker highlighting on dashboard and reports.
