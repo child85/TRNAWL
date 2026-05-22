@@ -573,10 +573,74 @@ th {
 .actions-grid,
 .calendar-grid,
 .report-grid,
+.report-builder-grid,
 .admin-grid,
 .customer-tile-grid {
   display: grid;
   gap: 14px;
+}
+
+.report-builder-grid {
+  grid-template-columns: minmax(300px, 0.75fr) minmax(0, 1.25fr);
+  align-items: start;
+}
+
+.report-data-fieldset {
+  margin-top: 14px;
+}
+
+.report-data-options {
+  display: grid;
+  gap: 10px;
+}
+
+.report-data-options label {
+  grid-template-columns: auto 1fr;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  padding: 12px;
+}
+
+.report-data-options small {
+  display: block;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.report-output {
+  display: grid;
+  gap: 14px;
+}
+
+.report-section {
+  border-left: 4px solid var(--primary);
+  background: var(--surface-soft);
+  padding: 14px;
+}
+
+.report-section h3 {
+  margin: 0 0 8px;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.report-section p {
+  margin: 0 0 8px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+.report-link {
+  width: 100%;
+  min-height: 0;
+  justify-content: flex-start;
+  text-align: left;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--primary-strong);
 }
 
 .template-grid {
@@ -1370,6 +1434,7 @@ th {
   .template-grid,
   .customer-tile-grid,
   .customer-info-grid,
+  .report-builder-grid,
   .capacity-layout,
   .ticket-detail-layout {
     grid-template-columns: 1fr 1fr;

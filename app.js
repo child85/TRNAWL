@@ -24,6 +24,9 @@ const state = {
   ownerFilter: "me",
   calendarRoleFilter: "all",
   calendarNameFilter: "",
+  reportOwnerFilter: "me",
+  reportFocus: "delivery",
+  reportDataPoints: ["summary", "blocked", "overdue", "dueSoon", "customerActions"],
   calendarReservations: JSON.parse(localStorage.getItem("trnawl.calendarReservations") || "[]"),
   pendingCalendarReservation: null,
 };
@@ -341,6 +344,18 @@ const developmentLog = [
       "Added real template tasks for the two previously placeholder workflows.",
     ],
     notes: ["Scratch workflows create tickets without saving a reusable template yet."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Report builder",
+    summary: "Turned Reports from a fixed brief into a selectable operational report builder.",
+    changes: [
+      "Added report focus selection.",
+      "Added owner scope so users can report only their own work.",
+      "Added selectable report data points.",
+      "Added a generated brief preview with live ticket and customer-action data.",
+    ],
+    notes: ["Reports are generated in-browser for the MVP."],
   },
 ];
 
@@ -2266,29 +2281,237 @@ function businessDatesFrom(dateString, days) {
 }
 
 function renderReports() {
-  const activeTickets = state.tickets.filter((ticket) => !isDoneTicket(ticket));
-  const blocked = activeTickets.filter((ticket) => ticket.blocked_reason);
-  const avgReadiness = activeTickets.length ? Math.round(activeTickets.reduce((sum, ticket) => sum + (ticket.readiness_score || 0), 0) / activeTickets.length) : 0;
-  const staleActions = state.customerActions.filter((action) => !["done", "cancelled"].includes(action.status) && isOverdue(action));
+  const ownerOptions = [
+    ["me", "My work"],
+    ["all", "All owners"],
+    ...state.people.map((person) => [person.id, person.display_name]),
+  ];
+  const dataPoints = reportDataPointOptions();
 
   $("#reportsView").innerHTML = `
-    <div class="report-grid">
-      <section class="panel">
-        <h2>Weekly Operational Brief</h2>
-        <div class="mini-list">
-          <div><strong>${state.tickets.filter(isOverdue).length} overdue tickets</strong><br><span class="muted">Work past due date.</span></div>
-          <div><strong>${blocked.length} blocked tickets</strong><br><span class="muted">Work waiting on another person, team, or dependency.</span></div>
-          <div><strong>${staleActions.length} stale customer actions</strong><br><span class="muted">Customer-owned actions past due.</span></div>
-          <div><strong>${avgReadiness}% average readiness</strong><br><span class="muted">Simple score across ticket readiness checks.</span></div>
+    <div class="report-builder-grid">
+      <section class="panel report-controls">
+        <div class="panel-heading">
+          <div>
+            <h2>Build Report</h2>
+            <p class="muted">Choose the message and the data points to include.</p>
+          </div>
         </div>
+        <div class="form-grid compact-form-grid">
+          <label>Report focus
+            <select id="reportFocus">
+              <option value="delivery" ${state.reportFocus === "delivery" ? "selected" : ""}>Delivery status</option>
+              <option value="blockers" ${state.reportFocus === "blockers" ? "selected" : ""}>Blocker escalation</option>
+              <option value="customer" ${state.reportFocus === "customer" ? "selected" : ""}>Customer follow-up</option>
+              <option value="owner" ${state.reportFocus === "owner" ? "selected" : ""}>My work summary</option>
+              <option value="readiness" ${state.reportFocus === "readiness" ? "selected" : ""}>Readiness review</option>
+            </select>
+          </label>
+          <label>Scope
+            <select id="reportOwnerFilter">
+              ${ownerOptions.map(([value, label]) => `<option value="${value}" ${state.reportOwnerFilter === value ? "selected" : ""}>${label}</option>`).join("")}
+            </select>
+          </label>
+        </div>
+        <fieldset class="readiness-fieldset report-data-fieldset">
+          <legend>Data points</legend>
+          <div class="report-data-options">
+            ${dataPoints.map((point) => `
+              <label>
+                <input type="checkbox" name="reportDataPoint" value="${point.id}" ${state.reportDataPoints.includes(point.id) ? "checked" : ""} />
+                <span><strong>${escapeHtml(point.label)}</strong><small>${escapeHtml(point.description)}</small></span>
+              </label>
+            `).join("")}
+          </div>
+        </fieldset>
       </section>
-      <section class="panel">
-        <h2>Active Blockers</h2>
-        ${blockedReasonList()}
+      <section class="panel report-output-panel">
+        <div class="panel-heading">
+          <div>
+            <h2>${escapeHtml(reportTitle())}</h2>
+            <p class="muted">${escapeHtml(reportSubtitle())}</p>
+          </div>
+          <button class="secondary-button" type="button" id="copyReportButton"><i data-lucide="copy"></i><span>Copy</span></button>
+        </div>
+        <div id="reportOutput" class="report-output">
+          ${reportOutputHtml()}
+        </div>
       </section>
     </div>
   `;
+  $("#reportFocus").addEventListener("change", (event) => {
+    state.reportFocus = event.target.value;
+    renderReports();
+  });
+  $("#reportOwnerFilter").addEventListener("change", (event) => {
+    state.reportOwnerFilter = event.target.value;
+    renderReports();
+  });
+  $$('input[name="reportDataPoint"]').forEach((input) => {
+    input.addEventListener("change", () => {
+      state.reportDataPoints = $$('input[name="reportDataPoint"]:checked').map((checkbox) => checkbox.value);
+      renderReports();
+    });
+  });
+  $("#copyReportButton").addEventListener("click", copyReportText);
   bindTicketDetailButtons();
+}
+
+function reportDataPointOptions() {
+  return [
+    { id: "summary", label: "Executive summary", description: "A short status statement for the selected scope." },
+    { id: "blocked", label: "Active blockers", description: "Blocked tickets, blocker reason, owner, customer, and age." },
+    { id: "overdue", label: "Overdue work", description: "Tickets and customer actions past due." },
+    { id: "dueSoon", label: "Due next 7 days", description: "Upcoming ticket deadlines that need attention." },
+    { id: "readiness", label: "Readiness score", description: "Average readiness and low-readiness tickets." },
+    { id: "customerActions", label: "Customer actions", description: "Open customer-owned follow-ups and stale actions." },
+    { id: "ownerLoad", label: "Owner workload", description: "Active work distribution by owner." },
+  ];
+}
+
+function reportTickets() {
+  const currentPerson = getCurrentPerson();
+  return state.tickets.filter((ticket) => {
+    if (isDoneTicket(ticket)) return false;
+    if (state.reportOwnerFilter === "all") return true;
+    if (state.reportOwnerFilter === "me") {
+      return currentPerson && (ticket.work_owner_id === currentPerson.id || ticket.work_owner_name === currentPerson.display_name || ticket.owner_name === currentPerson.display_name);
+    }
+    return ticket.work_owner_id === state.reportOwnerFilter || ticket.work_owner_name === state.reportOwnerFilter;
+  });
+}
+
+function reportActions() {
+  const tickets = reportTickets();
+  const ticketCustomers = new Set(tickets.map((ticket) => ticket.customer_name).filter(Boolean));
+  if (state.reportOwnerFilter === "all") {
+    return state.customerActions.filter((action) => !["done", "cancelled"].includes(action.status));
+  }
+  return state.customerActions.filter((action) => !["done", "cancelled"].includes(action.status) && ticketCustomers.has(action.customer_name));
+}
+
+function reportTitle() {
+  return {
+    delivery: "Delivery Status Report",
+    blockers: "Blocker Escalation Report",
+    customer: "Customer Follow-Up Report",
+    owner: "My Work Report",
+    readiness: "Readiness Review Report",
+  }[state.reportFocus] || "Operational Report";
+}
+
+function reportSubtitle() {
+  const scope = labelFor([["me", "my work"], ["all", "all owners"], ...state.people.map((person) => [person.id, person.display_name])], state.reportOwnerFilter);
+  return `Generated from live TRNAWL data for ${scope}.`;
+}
+
+function reportOutputHtml() {
+  const sections = reportSections();
+  return sections.length ? sections.map((section) => `
+    <article class="report-section">
+      <h3>${escapeHtml(section.title)}</h3>
+      ${section.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}
+      ${section.items?.length ? `<div class="mini-list">${section.items.map((item) => `<button class="report-link ticket-detail-button" type="button" data-ticket-id="${escapeHtml(item.id)}">${escapeHtml(item.label)}</button>`).join("")}</div>` : ""}
+    </article>
+  `).join("") : `<div class="empty-state">Select at least one data point.</div>`;
+}
+
+function reportSections() {
+  const tickets = reportTickets();
+  const actions = reportActions();
+  const blocked = tickets.filter((ticket) => ticket.blocked_reason);
+  const overdueTickets = tickets.filter(isOverdue);
+  const overdueActions = actions.filter(isOverdue);
+  const dueSoon = tickets.filter((ticket) => daysUntil(ticket.due_date) >= 0 && daysUntil(ticket.due_date) <= 7);
+  const avgReadiness = tickets.length ? Math.round(tickets.reduce((sum, ticket) => sum + (ticket.readiness_score || 0), 0) / tickets.length) : 0;
+  const sections = [];
+
+  if (state.reportDataPoints.includes("summary")) {
+    sections.push({
+      title: "What we want to say",
+      lines: [reportNarrative(tickets, blocked, overdueTickets, overdueActions, avgReadiness)],
+    });
+  }
+  if (state.reportDataPoints.includes("blocked")) {
+    sections.push({
+      title: `Active blockers (${blocked.length})`,
+      lines: [blocked.length ? "These items need a decision, input, or owner action before progress can continue." : "No active blockers in the selected scope."],
+      items: blocked.map((ticket) => ({ id: ticket.id, label: `${ticket.title} - ${labelFor(blockedReasons, ticket.blocked_reason)} - ${ticket.work_owner_name || "Unassigned"} - ${blockedAgeLabel(ticket)}` })),
+    });
+  }
+  if (state.reportDataPoints.includes("overdue")) {
+    sections.push({
+      title: `Overdue work (${overdueTickets.length + overdueActions.length})`,
+      lines: [
+        `${overdueTickets.length} ticket(s) are past due.`,
+        `${overdueActions.length} customer action(s) are past due.`,
+      ],
+      items: overdueTickets.map((ticket) => ({ id: ticket.id, label: `${ticket.title} - due ${formatDate(ticket.due_date)} - ${ticket.work_owner_name || "Unassigned"}` })),
+    });
+  }
+  if (state.reportDataPoints.includes("dueSoon")) {
+    sections.push({
+      title: `Due next 7 days (${dueSoon.length})`,
+      lines: [dueSoon.length ? "These deadlines are coming up and should be reviewed before they become overdue." : "No ticket deadlines in the next 7 days."],
+      items: dueSoon.map((ticket) => ({ id: ticket.id, label: `${ticket.title} - due ${formatDate(ticket.due_date)} - ${ticket.work_owner_name || "Unassigned"}` })),
+    });
+  }
+  if (state.reportDataPoints.includes("readiness")) {
+    const lowReadiness = tickets.filter((ticket) => (ticket.readiness_score || 0) > 0 && (ticket.readiness_score || 0) < 70);
+    sections.push({
+      title: `Readiness (${avgReadiness}%)`,
+      lines: [`Average readiness is ${avgReadiness}% across ${tickets.length} active ticket(s).`, `${lowReadiness.length} ticket(s) are below 70% readiness.`],
+      items: lowReadiness.map((ticket) => ({ id: ticket.id, label: `${ticket.title} - ${ticket.readiness_score || 0}% ready` })),
+    });
+  }
+  if (state.reportDataPoints.includes("customerActions")) {
+    sections.push({
+      title: `Customer actions (${actions.length})`,
+      lines: [actions.length ? "Customer-owned follow-ups are still open and should be tracked until closed." : "No open customer actions in the selected scope."],
+    });
+  }
+  if (state.reportDataPoints.includes("ownerLoad")) {
+    sections.push({
+      title: "Owner workload",
+      lines: ownerLoadLines(tickets),
+    });
+  }
+  return sections;
+}
+
+function reportNarrative(tickets, blocked, overdueTickets, overdueActions, avgReadiness) {
+  if (state.reportFocus === "blockers") {
+    return blocked.length ? `${blocked.length} active blocker(s) are stopping progress. The main ask is to clear dependencies and ownership decisions.` : "No active blockers need escalation right now.";
+  }
+  if (state.reportFocus === "customer") {
+    return overdueActions.length ? `${overdueActions.length} customer action(s) are stale. The main ask is customer follow-up and impact confirmation.` : "Customer follow-ups are under control for the selected scope.";
+  }
+  if (state.reportFocus === "owner") {
+    return `The selected owner scope has ${tickets.length} active ticket(s), ${blocked.length} blocker(s), and ${overdueTickets.length} overdue item(s).`;
+  }
+  if (state.reportFocus === "readiness") {
+    return `Readiness is currently ${avgReadiness}%. The main ask is to close missing readiness checks before work reaches final review.`;
+  }
+  return `Delivery has ${tickets.length} active ticket(s), ${blocked.length} blocker(s), and ${overdueTickets.length} overdue ticket(s).`;
+}
+
+function ownerLoadLines(tickets) {
+  const counts = tickets.reduce((acc, ticket) => {
+    const owner = ticket.work_owner_name || ticket.owner_name || "Unassigned";
+    acc[owner] = (acc[owner] || 0) + 1;
+    return acc;
+  }, {});
+  const lines = Object.entries(counts)
+    .sort(([, a], [, b]) => b - a)
+    .map(([owner, count]) => `${owner}: ${count} active ticket(s).`);
+  return lines.length ? lines : ["No active owner workload in the selected scope."];
+}
+
+async function copyReportText() {
+  const text = reportSections()
+    .map((section) => [section.title, ...section.lines, ...(section.items || []).map((item) => `- ${item.label}`)].join("\n"))
+    .join("\n\n");
+  await navigator.clipboard?.writeText(text);
 }
 
 function renderDevLog() {

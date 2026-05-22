@@ -284,3 +284,14 @@ Changed:
 - Added custom workflow name and task entry in the generator.
 - Changed Customer Action Follow-Up and Delivery Review Workflow from Ready labels to Generate Workflow buttons.
 - Added real template tasks for the two previously placeholder workflows.
+
+### Report Builder
+
+Turned Reports from a fixed brief into a selectable operational report builder.
+
+Changed:
+
+- Added report focus selection.
+- Added owner scope so users can report only their own work.
+- Added selectable report data points.
+- Added a generated brief preview with live ticket and customer-action data.
