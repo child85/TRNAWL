@@ -269,6 +269,19 @@ const developmentLog = [
     ],
     notes: ["The booking dialog now stays compact until the user searches."],
   },
+  {
+    date: "2026-05-22",
+    title: "Workflow dependency generation",
+    summary: "Added dependency settings to the New SOW workflow generator.",
+    changes: [
+      "Renamed the SOW starter to Generate Workflow.",
+      "Added editable dependency settings in the workflow dialog.",
+      "Defaulted review tasks to depend on the intake task.",
+      "Defaulted final review to depend on all review tasks.",
+      "Generated tickets now include dependency notes and dependency blockers.",
+    ],
+    notes: ["Workflow dependencies are visible in ticket text and blocker state for the MVP."],
+  },
 ];
 
 const ticketTypes = [
@@ -1152,21 +1165,22 @@ async function createTicket(event) {
 
 function renderWorkflows() {
   const newSow = state.templates.find((template) => template.slug === "new-sow");
-  const tasks = newSow ? state.templateTasks.filter((task) => task.template_id === newSow.id) : [];
+  const tasks = newSow ? workflowTasksForTemplate(newSow.id) : [];
+  const dependencies = defaultWorkflowDependencies(tasks);
   $("#workflowsView").innerHTML = `
     <div class="template-grid">
       ${state.templates.map((template) => `
         <article class="template-item">
           <h3>${escapeHtml(template.name)}</h3>
           <p>${escapeHtml(template.description || "")}</p>
-          ${template.slug === "new-sow" ? `<button class="primary-button" type="button" id="startSowButton"><i data-lucide="play"></i><span>Start</span></button>` : `<span class="pill">Ready</span>`}
+          ${template.slug === "new-sow" ? `<button class="primary-button" type="button" id="startSowButton"><i data-lucide="play"></i><span>Generate Workflow</span></button>` : `<span class="pill">Ready</span>`}
         </article>
       `).join("")}
     </div>
     <section class="panel" style="margin-top: 16px;">
       <h2>New SOW Workflow Tasks</h2>
       <div class="preview-list">
-        ${tasks.map((task) => `<div><strong>${task.position}. ${escapeHtml(task.title)}</strong><br><span class="muted">${escapeHtml(task.description || "")}</span></div>`).join("")}
+        ${tasks.map((task) => workflowTaskPreview(task, tasks, dependencies)).join("")}
       </div>
     </section>
   `;
@@ -1175,18 +1189,94 @@ function renderWorkflows() {
 
 function openWorkflowDialog() {
   const newSow = state.templates.find((template) => template.slug === "new-sow");
-  const tasks = newSow ? state.templateTasks.filter((task) => task.template_id === newSow.id) : [];
-  $("#workflowPreview").innerHTML = tasks.map((task) => `<div><strong>${task.position}. ${escapeHtml(task.title)}</strong><br><span class="muted">${escapeHtml(task.description || "")}</span></div>`).join("");
+  const tasks = newSow ? workflowTasksForTemplate(newSow.id) : [];
+  const dependencies = defaultWorkflowDependencies(tasks);
+  $("#workflowPreview").innerHTML = tasks.map((task) => workflowTaskPreview(task, tasks, dependencies)).join("");
+  $("#workflowDependencies").innerHTML = workflowDependencyEditor(tasks, dependencies);
   setTicketDefaults();
   $("#workflowDialog").showModal();
+}
+
+function workflowTasksForTemplate(templateId) {
+  return state.templateTasks
+    .filter((task) => task.template_id === templateId)
+    .sort((a, b) => a.position - b.position);
+}
+
+function defaultWorkflowDependencies(tasks) {
+  const byPosition = Object.fromEntries(tasks.map((task) => [task.position, task.id]));
+  return Object.fromEntries(tasks.map((task) => {
+    if (task.position === 1) return [task.id, []];
+    if (task.position === 6) return [task.id, [2, 3, 4, 5].map((position) => byPosition[position]).filter(Boolean)];
+    return [task.id, byPosition[1] ? [byPosition[1]] : []];
+  }));
+}
+
+function workflowTaskPreview(task, tasks, dependencies) {
+  const dependsOn = dependencyLabels(task.id, tasks, dependencies);
+  return `
+    <div class="workflow-task-preview">
+      <strong>${task.position}. ${escapeHtml(task.title)}</strong>
+      <span class="muted">${escapeHtml(task.description || "")}</span>
+      <span class="workflow-dependency-note">${escapeHtml(dependsOn.length ? `Depends on: ${dependsOn.join(", ")}` : "Starts immediately")}</span>
+    </div>
+  `;
+}
+
+function workflowDependencyEditor(tasks, dependencies) {
+  return `
+    <section class="workflow-dependency-panel">
+      <div>
+        <h3>Dependency settings</h3>
+        <p class="muted">Default: intake first, review tasks in parallel after intake, final review after every review task is done.</p>
+      </div>
+      <div class="workflow-dependency-grid">
+        ${tasks.map((task) => workflowDependencyRow(task, tasks, dependencies)).join("")}
+      </div>
+    </section>
+  `;
+}
+
+function workflowDependencyRow(task, tasks, dependencies) {
+  const options = tasks.filter((candidate) => candidate.position < task.position);
+  return `
+    <article class="workflow-dependency-row">
+      <strong>${task.position}. ${escapeHtml(task.title)}</strong>
+      <div class="dependency-checkboxes">
+        ${options.length ? options.map((candidate) => `
+          <label>
+            <input type="checkbox" name="workflowDependency" data-task-id="${escapeHtml(task.id)}" value="${escapeHtml(candidate.id)}" ${dependencies[task.id]?.includes(candidate.id) ? "checked" : ""} />
+            ${escapeHtml(candidate.position)}. ${escapeHtml(candidate.title)}
+          </label>
+        `).join("") : `<span class="muted">Starts immediately</span>`}
+      </div>
+    </article>
+  `;
+}
+
+function workflowDependencySelection(tasks) {
+  const selected = $$('input[name="workflowDependency"]:checked');
+  return Object.fromEntries(tasks.map((task) => [
+    task.id,
+    selected.filter((input) => input.dataset.taskId === task.id).map((input) => input.value),
+  ]));
+}
+
+function dependencyLabels(taskId, tasks, dependencies) {
+  return (dependencies[taskId] || [])
+    .map((dependencyId) => tasks.find((task) => task.id === dependencyId))
+    .filter(Boolean)
+    .map((task) => `${task.position}. ${task.title}`);
 }
 
 async function startWorkflow(event) {
   event.preventDefault();
   const template = state.templates.find((item) => item.slug === "new-sow");
   if (!template) return;
-  const tasks = state.templateTasks.filter((task) => task.template_id === template.id);
+  const tasks = workflowTasksForTemplate(template.id);
+  const dependencies = workflowDependencySelection(tasks);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
+  const waitingStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "Waiting") || newStage;
   const customer = findById(state.customers, $("#workflowCustomer").value);
   const owner = findById(state.people, $("#workflowOwner").value);
   const deliveryLead = findById(state.people, $("#workflowDeliveryLead").value);
@@ -1195,30 +1285,33 @@ async function startWorkflow(event) {
 
   try {
     setSync("Creating workflow");
+    const dependencySummary = workflowDependencySummary(tasks, dependencies);
     const [run] = await api("/workflow_runs", {
       method: "POST",
       body: {
         template_id: template.id,
         name: `${customer?.name || "Customer"} New SOW Workflow`,
         customer_name: customer?.name || null,
-        opportunity_reference: $("#workflowOpportunity").value.trim() || null,
+        opportunity_reference: workflowOpportunityWithDependencies($("#workflowOpportunity").value.trim(), dependencySummary),
         started_by: state.user.id,
       },
     });
 
     for (const task of tasks) {
       const taskRules = ticketTypeRules[task.default_ticket_type] || ticketTypeRules.task;
+      const taskDependencies = dependencyLabels(task.id, tasks, dependencies);
+      const hasDependencies = taskDependencies.length > 0;
       const dueDate = new Date(baseDate);
       dueDate.setDate(baseDate.getDate() + (task.suggested_due_offset_days || 0));
       const [ticket] = await api("/tickets", {
         method: "POST",
         body: {
           title: `${customer?.name || "Customer"}: ${task.title}`,
-          description: task.description,
+          description: workflowTaskDescription(task, taskDependencies),
           ticket_type: task.default_ticket_type,
           priority: task.default_priority,
-          blocked_reason: task.default_blocked_reason,
-          blocked_since: task.default_blocked_reason ? new Date().toISOString() : null,
+          blocked_reason: hasDependencies ? "dependency_unresolved" : task.default_blocked_reason,
+          blocked_since: hasDependencies || task.default_blocked_reason ? new Date().toISOString() : null,
           customer_id: taskRules.customer ? customer?.id || null : null,
           customer_name: taskRules.customer ? customer?.name || null : null,
           work_owner_id: owner?.id || null,
@@ -1231,7 +1324,7 @@ async function startWorkflow(event) {
           owner_name: owner?.display_name || null,
           requester_name: state.user.email,
           due_date: dueDate.toISOString().slice(0, 10),
-          status_stage_id: newStage?.id || null,
+          status_stage_id: hasDependencies ? waitingStage?.id || null : newStage?.id || null,
           requester_id: state.user.id,
         },
       });
@@ -1253,6 +1346,27 @@ async function startWorkflow(event) {
   } catch (error) {
     setSync(error.message);
   }
+}
+
+function workflowTaskDescription(task, dependencyLabelsForTask) {
+  const dependencyText = dependencyLabelsForTask.length
+    ? `\n\nDependencies:\n${dependencyLabelsForTask.map((label) => `- ${label}`).join("\n")}\n\nDo not complete this task until the dependencies are done.`
+    : "\n\nDependencies: none. This task can start immediately.";
+  return `${task.description || ""}${dependencyText}`;
+}
+
+function workflowDependencySummary(tasks, dependencies) {
+  return tasks
+    .map((task) => {
+      const labels = dependencyLabels(task.id, tasks, dependencies);
+      return `${task.position}. ${task.title}: ${labels.length ? labels.join(", ") : "starts immediately"}`;
+    })
+    .join(" | ");
+}
+
+function workflowOpportunityWithDependencies(opportunity, dependencySummary) {
+  const dependencyNote = `Dependencies: ${dependencySummary}`;
+  return opportunity ? `${opportunity} | ${dependencyNote}` : dependencyNote;
 }
 
 function renderCustomers() {

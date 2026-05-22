@@ -219,3 +219,15 @@ Changed:
 - Task and customer results now open as dropdowns under their search fields.
 - Selecting a result closes the dropdown.
 - Clicking outside the booking search closes open dropdowns.
+
+### Workflow Dependency Generation
+
+Added dependency settings to the New SOW workflow generator.
+
+Changed:
+
+- Renamed the SOW starter to Generate Workflow.
+- Added editable dependency settings in the workflow dialog.
+- Defaulted review tasks to depend on the intake task.
+- Defaulted final review to depend on all review tasks.
+- Generated tickets now include dependency notes and dependency blockers.

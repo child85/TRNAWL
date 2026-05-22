@@ -121,8 +121,8 @@
       <form id="workflowForm" method="dialog" class="modal-form">
         <div class="modal-header">
           <div>
-            <h2>Start New SOW Workflow</h2>
-            <p>Creates the minimum review tasks for an operationally ready SOW.</p>
+            <h2>Generate New SOW Workflow</h2>
+            <p>Create the operational review tasks and set dependency logic before tickets are generated.</p>
           </div>
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
@@ -135,9 +135,10 @@
           <label>First due date<input id="workflowDueDate" type="date" /></label>
         </div>
         <div id="workflowPreview" class="preview-list"></div>
+        <div id="workflowDependencies" class="workflow-dependencies"></div>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
-          <button class="primary-button" type="submit">Create Workflow</button>
+          <button class="primary-button" type="submit">Generate Workflow</button>
         </div>
       </form>
     </dialog>
