@@ -219,6 +219,20 @@ const developmentLog = [
     ],
     notes: ["Blockers are now treated as escalation work, not passive report text."],
   },
+  {
+    date: "2026-05-22",
+    title: "Quality review pass",
+    summary: "Tightened operational logic where the MVP worked but the workflow could mislead users.",
+    changes: [
+      "Dashboard counts now use active tickets instead of every historical ticket.",
+      "Priority work no longer shows the same ticket multiple times.",
+      "Blocked sections are now named Active Blockers and show blocked age.",
+      "Calendar-created customer work now becomes a customer action instead of a hidden-customer generic task.",
+      "Calendar bookings now use the last booked business day as the due date.",
+      "Exact task or customer search matches are resolved before creating new records.",
+    ],
+    notes: ["This pass focused on data clarity and avoiding accidental duplicate or misleading work items."],
+  },
 ];
 
 const ticketTypes = [
@@ -720,14 +734,16 @@ function switchView(view) {
 }
 
 function renderDashboard() {
-  const overdue = state.tickets.filter(isOverdue);
-  const blocked = state.tickets.filter((ticket) => ticket.blocked_reason);
-  const dueSoon = state.tickets.filter((ticket) => daysUntil(ticket.due_date) >= 0 && daysUntil(ticket.due_date) <= 7);
+  const activeTickets = state.tickets.filter((ticket) => !isDoneTicket(ticket));
+  const overdue = activeTickets.filter(isOverdue);
+  const blocked = activeTickets.filter((ticket) => ticket.blocked_reason);
+  const dueSoon = activeTickets.filter((ticket) => daysUntil(ticket.due_date) >= 0 && daysUntil(ticket.due_date) <= 7);
+  const priorityTickets = uniqueTickets([...overdue, ...blocked, ...dueSoon]).slice(0, 8);
   const openActions = state.customerActions.filter((action) => !["done", "cancelled"].includes(action.status));
 
   $("#dashboardView").innerHTML = `
     <div class="metric-grid">
-      ${metric("Open tickets", state.tickets.length)}
+      ${metric("Open tickets", activeTickets.length)}
       ${metric("Overdue", overdue.length, "danger")}
       ${metric("Blocked", blocked.length, "warning")}
       ${metric("Customer actions", openActions.length)}
@@ -735,10 +751,10 @@ function renderDashboard() {
     <div class="content-grid">
       <section class="panel">
         <h2>Priority Work</h2>
-        ${ticketTable([...overdue, ...blocked, ...dueSoon].slice(0, 8))}
+        ${ticketTable(priorityTickets)}
       </section>
       <section class="panel">
-        <h2>Blocked Reasons</h2>
+        <h2>Active Blockers</h2>
         ${blockedReasonList()}
       </section>
     </div>
@@ -773,7 +789,7 @@ function ticketTable(tickets) {
 
 function blockedReasonList() {
   const blockedTickets = state.tickets
-    .filter((ticket) => ticket.blocked_reason)
+    .filter((ticket) => ticket.blocked_reason && !isDoneTicket(ticket))
     .sort((a, b) => daysUntil(a.due_date) - daysUntil(b.due_date));
   if (!blockedTickets.length) return `<div class="empty-state">No blocked tickets.</div>`;
   return `<div class="blocked-tile-grid">${blockedTickets.map(blockedTicketTile).join("")}</div>`;
@@ -784,7 +800,7 @@ function blockedTicketTile(ticket) {
     <button class="blocked-ticket-tile ticket-detail-button" type="button" data-ticket-id="${ticket.id}">
       <span class="blocked-reason-label">${escapeHtml(labelFor(blockedReasons, ticket.blocked_reason))}</span>
       <strong>${escapeHtml(ticket.title)}</strong>
-      <span>${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")} · due ${escapeHtml(formatDate(ticket.due_date))}</span>
+      <span>${escapeHtml(blockedAgeLabel(ticket))} · ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")} · due ${escapeHtml(formatDate(ticket.due_date))}</span>
       ${ticket.customer_name ? `<small>${escapeHtml(ticket.customer_name)}</small>` : ""}
     </button>
   `;
@@ -1544,7 +1560,7 @@ function calendarReservationChip(reservation) {
     <span class="capacity-chip reservation-chip" style="--person-color: ${escapeHtml(reservation.color || "#0067b1")}">
       <strong>${escapeHtml(reservation.personName)}</strong>
       <small>${escapeHtml(duration)} · ${escapeHtml(context)}</small>
-      <button class="reservation-delete-button" type="button" data-booking-id="${escapeHtml(bookingKey)}" title="Delete booking" aria-label="Delete booking">×</button>
+      <button class="reservation-delete-button" type="button" data-booking-id="${escapeHtml(bookingKey)}" title="Delete booking" aria-label="Delete booking">x</button>
     </span>
   `;
 }
@@ -1720,6 +1736,7 @@ async function saveCalendarReservation(event) {
   if (!pending) return;
   const taskTitle = $("#calendarBookingTaskSearch").value.trim();
   const note = $("#calendarBookingNote").value.trim();
+  resolveCalendarBookingSelection(taskTitle, $("#calendarBookingCustomerSearch").value.trim());
   if (!pending.ticketId && !taskTitle && !pending.customerId) {
     $("#calendarBookingSummary").innerHTML = `<strong>Type a task title or pick a task/customer before booking time.</strong>`;
     return;
@@ -1747,24 +1764,52 @@ async function saveCalendarReservation(event) {
   }
 }
 
+function resolveCalendarBookingSelection(taskTitle, customerName) {
+  const pending = state.pendingCalendarReservation;
+  if (!pending) return;
+  if (!pending.ticketId && taskTitle) {
+    const exactTicket = state.tickets.find((ticket) => ticket.title?.toLowerCase() === taskTitle.toLowerCase());
+    if (exactTicket) {
+      pending.ticketId = exactTicket.id;
+    }
+  }
+  if (!pending.customerId && customerName) {
+    const exactCustomer = state.customers.find((customer) => customer.name?.toLowerCase() === customerName.toLowerCase());
+    if (exactCustomer) {
+      pending.customerId = exactCustomer.id;
+    }
+  }
+  const ticket = findById(state.tickets, pending.ticketId);
+  if (ticket && !pending.customerId) {
+    const customer = ticket.customer_id
+      ? findById(state.customers, ticket.customer_id)
+      : state.customers.find((item) => item.name === ticket.customer_name);
+    if (customer) {
+      pending.customerId = customer.id;
+    }
+  }
+}
+
 async function createCalendarBookingTask(pending, taskTitle, note) {
   const person = findById(state.people, pending.personId);
   const customer = findById(state.customers, pending.customerId);
   const newStage = state.stages.find((stage) => stage.stage_type === "ticket" && stage.name === "New") || state.stages.find((stage) => stage.stage_type === "ticket");
+  const bookedDates = businessDatesFrom(pending.date, normalizedBookingDays());
+  const dueDate = bookedDates[bookedDates.length - 1] || pending.date;
   const title = taskTitle || `${customer?.name || "Calendar"} work`;
   const [ticket] = await api("/tickets", {
     method: "POST",
     body: {
       title,
       description: note || `Calendar booking for ${person?.display_name || "team member"}.`,
-      ticket_type: "task",
+      ticket_type: customer ? "customer_action" : "task",
       priority: "medium",
       work_owner_id: person?.id || null,
       work_owner_name: person?.display_name || null,
       owner_name: person?.display_name || null,
       customer_id: customer?.id || null,
       customer_name: customer?.name || null,
-      due_date: pending.date,
+      due_date: dueDate,
       status_stage_id: newStage?.id || null,
       requester_id: state.user.id,
       requester_name: state.user.email,
@@ -1832,8 +1877,9 @@ function businessDatesFrom(dateString, days) {
 }
 
 function renderReports() {
-  const blocked = state.tickets.filter((ticket) => ticket.blocked_reason);
-  const avgReadiness = state.tickets.length ? Math.round(state.tickets.reduce((sum, ticket) => sum + (ticket.readiness_score || 0), 0) / state.tickets.length) : 0;
+  const activeTickets = state.tickets.filter((ticket) => !isDoneTicket(ticket));
+  const blocked = activeTickets.filter((ticket) => ticket.blocked_reason);
+  const avgReadiness = activeTickets.length ? Math.round(activeTickets.reduce((sum, ticket) => sum + (ticket.readiness_score || 0), 0) / activeTickets.length) : 0;
   const staleActions = state.customerActions.filter((action) => !["done", "cancelled"].includes(action.status) && isOverdue(action));
 
   $("#reportsView").innerHTML = `
@@ -1848,7 +1894,7 @@ function renderReports() {
         </div>
       </section>
       <section class="panel">
-        <h2>Blocked Reason Aging</h2>
+        <h2>Active Blockers</h2>
         ${blockedReasonList()}
       </section>
     </div>
@@ -1914,14 +1960,6 @@ function renderAdmin() {
   `;
 }
 
-function countBy(items, key) {
-  return items.reduce((acc, item) => {
-    const value = item[key] || "none";
-    acc[value] = (acc[value] || 0) + 1;
-    return acc;
-  }, {});
-}
-
 function labelFor(options, value) {
   return options.find(([optionValue]) => optionValue === value)?.[1] || value || "";
 }
@@ -1932,6 +1970,27 @@ function findById(items, id) {
 
 function getCurrentPerson() {
   return state.people.find((person) => person.is_current_user) || state.people[0];
+}
+
+function isDoneTicket(ticket) {
+  const stage = findById(state.stages, ticket.status_stage_id);
+  return Boolean(stage?.is_done || stage?.name?.toLowerCase() === "done");
+}
+
+function uniqueTickets(tickets) {
+  return [...new Map(tickets.map((ticket) => [ticket.id, ticket])).values()];
+}
+
+function blockedAgeLabel(ticket) {
+  if (!ticket.blocked_since) return "Blocked";
+  const blockedAt = new Date(ticket.blocked_since);
+  if (Number.isNaN(blockedAt.getTime())) return "Blocked";
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  blockedAt.setHours(0, 0, 0, 0);
+  const days = Math.max(0, Math.floor((today - blockedAt) / 86400000));
+  if (days === 0) return "Blocked today";
+  return `Blocked ${days}d`;
 }
 
 function colorForPersonName(name) {

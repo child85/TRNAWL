@@ -174,3 +174,16 @@ Changed:
 - Each blocker tile opens the ticket detail view.
 - Tiles show blocked reason, ticket title, owner, due date, and customer context.
 - Added stronger blocker highlighting on dashboard and reports.
+
+### Quality Review Pass
+
+Tightened operational logic where the MVP worked but the workflow could mislead users.
+
+Changed:
+
+- Dashboard counts now use active tickets instead of every historical ticket.
+- Priority work no longer shows the same ticket multiple times.
+- Blocked sections are now named Active Blockers and show blocked age.
+- Calendar-created customer work now becomes a customer action instead of a hidden-customer generic task.
+- Calendar bookings now use the last booked business day as the due date.
+- Exact task or customer search matches are resolved before creating new records.
