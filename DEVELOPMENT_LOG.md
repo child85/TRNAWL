@@ -197,3 +197,14 @@ Changed:
 - Removed the Take ownership button from the Assignment section.
 - Kept the Owner select as the single place to change assignment.
 - Reduced horizontal crowding in the ticket detail view.
+
+### Ticket Detail Field Cleanup
+
+Moved Owner and Blocked reason back into the normal ticket detail field grid.
+
+Changed:
+
+- Moved Owner into the compact ticket fields.
+- Moved Blocked reason into the compact ticket fields.
+- Removed the separate Assignment panel from ticket details.
+- Kept stable context settings focused on customer and lead fields only.

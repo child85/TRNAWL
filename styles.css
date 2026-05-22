@@ -1095,38 +1095,16 @@ th {
 }
 
 .compact-ticket-fields label,
-.settings-grid label,
-.assignment-row label {
+.settings-grid label {
   gap: 6px;
 }
 
 .compact-ticket-fields input,
 .compact-ticket-fields select,
 .compact-ticket-fields textarea,
-.settings-grid select,
-.assignment-row select {
+.settings-grid select {
   min-height: 42px;
   padding: 10px 12px;
-}
-
-.assignment-panel {
-  border: 1px solid var(--line);
-  border-radius: 3px;
-  background: #fbfdff;
-  padding: 12px;
-}
-
-.assignment-panel h3 {
-  margin: 0;
-  color: var(--navy);
-}
-
-.assignment-row {
-  display: grid;
-  grid-template-columns: 1fr;
-  align-items: end;
-  gap: 10px;
-  margin-top: 10px;
 }
 
 .stable-settings {
@@ -1301,10 +1279,6 @@ th {
 
   .detail-side {
     padding: 12px;
-  }
-
-  .assignment-row {
-    grid-template-columns: 1fr;
   }
 
   .detail-header {

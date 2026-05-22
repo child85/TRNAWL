@@ -244,6 +244,18 @@ const developmentLog = [
     ],
     notes: ["Assignment remains editable without a duplicate shortcut."],
   },
+  {
+    date: "2026-05-22",
+    title: "Ticket detail field cleanup",
+    summary: "Moved Owner and Blocked reason back into the normal ticket detail field grid.",
+    changes: [
+      "Moved Owner into the compact ticket fields.",
+      "Moved Blocked reason into the compact ticket fields.",
+      "Removed the separate Assignment panel from ticket details.",
+      "Kept stable context settings focused on customer and lead fields only.",
+    ],
+    notes: ["Owner and blocker status are regular working fields, not rare settings."],
+  },
 ];
 
 const ticketTypes = [
