@@ -1,6 +1,6 @@
 # Workflow Notes
 
-TRNAWL starts with simple, understandable workflow stages.
+TRNAWL starts with simple, understandable workflow stages. The goal is operational governance without bureaucracy.
 
 ## Default Ticket Workflow
 
@@ -19,6 +19,21 @@ TRNAWL starts with simple, understandable workflow stages.
 5. Approved
 6. Delivered
 
+## New SOW Workflow
+
+The New SOW Workflow should capture the minimum operational review path for a new statement of work.
+
+Suggested generated tasks:
+
+1. Create SOW Intake Ticket
+2. Delivery Review
+3. Pricing Review
+4. Scope Boundary Review
+5. Legal Review
+6. Customer Deck / Final Review
+
+Each task should have an owner, due date, status, and blocker field. The workflow should make missing handoffs visible without forcing a heavy project plan.
+
 ## Reminder Rules
 
 Initial reminder behavior should be simple:
@@ -31,3 +46,14 @@ Initial reminder behavior should be simple:
 ## AI Review Step
 
 The **Improve with AI** action should happen before ticket submission. Users should see proposed changes and decide whether to accept, edit, or discard them.
+
+AI should look for missing operational context:
+
+- unclear owner
+- missing due date
+- vague request
+- hidden scope assumption
+- pricing dependency
+- delivery feasibility concern
+- customer dependency
+- SLA or staffing risk
