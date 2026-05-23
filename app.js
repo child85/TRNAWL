@@ -533,6 +533,16 @@ const developmentLog = [
     ],
     notes: ["Related customer tickets still use the compact table where a list is useful."],
   },
+  {
+    date: "2026-05-23",
+    title: "AI model stabilization",
+    summary: "Stabilized the Improve with AI backend model mapping.",
+    changes: [
+      "Mapped Haiku settings to a stable Anthropic model snapshot.",
+      "Kept friendly Admin values like haiku working for Azure environment variables.",
+    ],
+    notes: ["This protects the note improvement API from brittle model aliases."],
+  },
 ];
 
 const ticketTypes = [

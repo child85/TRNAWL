@@ -1,7 +1,15 @@
 const MODEL_ALIASES = {
-  haiku: "claude-3-5-haiku-latest",
+  haiku: "claude-3-5-haiku-20241022",
+  "claude-3-5-haiku-latest": "claude-3-5-haiku-20241022",
   sonnet: "claude-sonnet-4-5",
 };
+
+function resolveModel(value) {
+  const configured = String(value || "haiku").trim();
+  const key = configured.toLowerCase();
+  if (key.includes("haiku")) return "claude-3-5-haiku-20241022";
+  return MODEL_ALIASES[key] || configured;
+}
 
 module.exports = async function improveNote(context, req) {
   try {
@@ -18,8 +26,7 @@ module.exports = async function improveNote(context, req) {
       return;
     }
 
-    const configuredModel = process.env.ANTHROPIC_MODEL || "haiku";
-    const model = MODEL_ALIASES[configuredModel.toLowerCase()] || configuredModel;
+    const model = resolveModel(process.env.ANTHROPIC_MODEL);
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {

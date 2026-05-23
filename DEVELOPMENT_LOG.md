@@ -421,3 +421,12 @@ Changed:
 - Replaced the Excel-like Priority Work table with scan-friendly cards.
 - Added due-date urgency labels for overdue, due today, due soon, and undated work.
 - Kept sorting by due date while making each item easier to read.
+
+### AI Model Stabilization
+
+Stabilized the Improve with AI backend model mapping.
+
+Changed:
+
+- Mapped Haiku settings to a stable Anthropic model snapshot.
+- Kept friendly Admin values like haiku working for Azure environment variables.
