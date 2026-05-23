@@ -148,6 +148,11 @@ textarea:focus {
   padding: 4px;
 }
 
+.ai-improve-button {
+  justify-self: start;
+  margin-top: -2px;
+}
+
 .auth-actions,
 .topbar-actions,
 .modal-actions,
@@ -709,6 +714,28 @@ th {
   background: var(--surface-soft);
   padding: 12px;
   margin-bottom: 12px;
+}
+
+.ai-review-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.ai-review-grid h3,
+#aiImproveDialog h3 {
+  margin: 0 0 8px;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.ai-review-box {
+  min-height: 180px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 12px;
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 
 .mail-preview-body {
@@ -1595,6 +1622,7 @@ th {
   .report-builder-grid,
   .roadmap-grid,
   .mail-preview-grid,
+  .ai-review-grid,
   .capacity-layout,
   .ticket-detail-layout {
     grid-template-columns: 1fr 1fr;

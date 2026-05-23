@@ -1,6 +1,7 @@
 const SUPABASE_URL = "https://ofwwpmnjbbojdznnbxpl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_kcTEx8ODCrU3tO7LpeVxVw_ytPxlDRA";
 const EMAIL_WORKER_URL = "https://trnawl-email-api.thomasfecke263.workers.dev/";
+const defaultAiInstruction = "Rephrase into clear business English. Translate to English if needed. Fix typos and typing mistakes. Preserve intent. Do not invent facts. If important delivery details are missing, list them as suggestions.";
 
 const defaultMailSettings = {
   assignedToOwner: true,
@@ -59,6 +60,9 @@ const state = {
   reportDataPoints: ["summary", "blocked", "overdue", "dueSoon", "customerActions"],
   mailSettings: JSON.parse(localStorage.getItem("trnawl.mailSettings") || JSON.stringify(defaultMailSettings)),
   mailTemplates: { ...defaultMailTemplates, ...JSON.parse(localStorage.getItem("trnawl.mailTemplates") || "{}") },
+  aiInstruction: localStorage.getItem("trnawl.aiInstruction") || defaultAiInstruction,
+  pendingAiTargetId: null,
+  pendingAiImprovedText: "",
   sentMailKeys: JSON.parse(localStorage.getItem("trnawl.sentMailKeys") || "{}"),
   calendarReservations: JSON.parse(localStorage.getItem("trnawl.calendarReservations") || "[]"),
   pendingCalendarReservation: null,
@@ -506,6 +510,18 @@ const developmentLog = [
     ],
     notes: ["Drag and drop updates the existing Supabase roadmap item."],
   },
+  {
+    date: "2026-05-23",
+    title: "AI note improvement",
+    summary: "Added Improve with AI for operational text quality.",
+    changes: [
+      "Added Azure Function API for Anthropic note improvement.",
+      "Added Improve with AI buttons to note and description fields.",
+      "Added review-before-accept dialog with suggestions.",
+      "Added Admin AI instruction settings.",
+    ],
+    notes: ["The API key stays server-side in Azure Static Web Apps environment variables."],
+  },
 ];
 
 const ticketTypes = [
@@ -675,6 +691,7 @@ function bindEvents() {
   $("#actionCustomer").addEventListener("change", applyActionCustomerDefaults);
   $("#personForm").addEventListener("submit", savePerson);
   $("#projectPlanForm").addEventListener("submit", saveProjectPlanItem);
+  $("#aiImproveForm").addEventListener("submit", acceptAiImprovement);
 
   $$(".close-dialog").forEach((button) => {
     button.addEventListener("click", () => button.closest("dialog").close());
@@ -683,11 +700,74 @@ function bindEvents() {
   $$(".nav-item").forEach((button) => {
     button.addEventListener("click", () => switchView(button.dataset.view));
   });
+
+  attachAiImproveButtons();
 }
 
 function fillSelect(select, options, selected = "") {
   if (!select) return;
   select.innerHTML = options.map(([value, label]) => `<option value="${value}" ${value === selected ? "selected" : ""}>${label}</option>`).join("");
+}
+
+function attachAiImproveButtons() {
+  [
+    "ticketDescription",
+    "ticketDetailDescription",
+    "ticketCommentText",
+    "customerNotes",
+    "customerEditNotes",
+    "calendarBookingNote",
+    "projectPlanDescription",
+  ].forEach(addAiImproveButton);
+}
+
+function addAiImproveButton(textareaId) {
+  const textarea = $(`#${textareaId}`);
+  if (!textarea || textarea.dataset.aiReady) return;
+  textarea.dataset.aiReady = "true";
+  const button = document.createElement("button");
+  button.className = "secondary-button compact-button ai-improve-button";
+  button.type = "button";
+  button.dataset.targetId = textareaId;
+  button.innerHTML = `<i data-lucide="sparkles"></i><span>Improve with AI</span>`;
+  button.addEventListener("click", () => improveTextWithAi(textareaId));
+  textarea.insertAdjacentElement("afterend", button);
+}
+
+async function improveTextWithAi(targetId) {
+  const textarea = $(`#${targetId}`);
+  const text = textarea?.value.trim();
+  if (!textarea || !text) return;
+  try {
+    setSync("Improving text");
+    const response = await fetch("/api/improve-note", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ text, instruction: state.aiInstruction }),
+    });
+    const result = await response.json();
+    if (!response.ok) throw new Error(result.error || "AI improvement failed.");
+    state.pendingAiTargetId = targetId;
+    state.pendingAiImprovedText = result.improvedText || text;
+    $("#aiOriginalText").textContent = text;
+    $("#aiImprovedText").value = state.pendingAiImprovedText;
+    $("#aiSuggestions").innerHTML = result.suggestions?.length
+      ? result.suggestions.map((suggestion) => `<div>${escapeHtml(suggestion)}</div>`).join("")
+      : `<div>No missing details suggested.</div>`;
+    $("#aiImproveDialog").showModal();
+    setSync("Ready");
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+function acceptAiImprovement(event) {
+  event.preventDefault();
+  const textarea = state.pendingAiTargetId ? $(`#${state.pendingAiTargetId}`) : null;
+  if (textarea) textarea.value = $("#aiImprovedText").value;
+  state.pendingAiTargetId = null;
+  state.pendingAiImprovedText = "";
+  $("#aiImproveDialog").close();
 }
 
 function currentReadinessConfig() {
@@ -3257,6 +3337,25 @@ function renderAdmin() {
           <div><strong>Recipient rule</strong><br><span class="muted">Users without an email address are skipped automatically.</span></div>
         </div>
       </section>
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>AI Settings</h2>
+            <p class="muted">Define what Improve with AI should optimize for.</p>
+          </div>
+        </div>
+        <label>AI instruction<textarea id="aiInstructionInput" rows="5">${escapeHtml(state.aiInstruction)}</textarea></label>
+        <div class="tag-row">
+          <span class="pill">Translate to English</span>
+          <span class="pill">Fix typos</span>
+          <span class="pill">Preserve intent</span>
+          <span class="pill">Do not invent facts</span>
+        </div>
+        <div class="card-actions">
+          <button class="primary-button compact-button" type="button" id="saveAiInstructionButton">Save AI Instruction</button>
+          <button class="secondary-button compact-button" type="button" id="resetAiInstructionButton">Reset</button>
+        </div>
+      </section>
       <section class="panel danger-zone">
         <h2>Danger Zone</h2>
         <p class="muted">For MVP cleanup only. This permanently deletes every ticket, including ticket updates and workflow links.</p>
@@ -3266,6 +3365,8 @@ function renderAdmin() {
   `;
   $("#addPersonButton").addEventListener("click", openPersonDialog);
   bindMailTemplateEditors();
+  $("#saveAiInstructionButton").addEventListener("click", saveAiInstruction);
+  $("#resetAiInstructionButton").addEventListener("click", resetAiInstruction);
   $$(".edit-person-button").forEach((button) => {
     button.addEventListener("click", () => openPersonDialog(button.dataset.personId));
   });
@@ -3322,6 +3423,18 @@ function bindMailTemplateEditors() {
       renderAdmin();
     });
   });
+}
+
+function saveAiInstruction() {
+  state.aiInstruction = $("#aiInstructionInput").value.trim() || defaultAiInstruction;
+  localStorage.setItem("trnawl.aiInstruction", state.aiInstruction);
+  renderAdmin();
+}
+
+function resetAiInstruction() {
+  state.aiInstruction = defaultAiInstruction;
+  localStorage.setItem("trnawl.aiInstruction", state.aiInstruction);
+  renderAdmin();
 }
 
 function labelFor(options, value) {

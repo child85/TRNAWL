@@ -337,6 +337,36 @@
       </form>
     </dialog>
 
+    <dialog id="aiImproveDialog" class="modal">
+      <form id="aiImproveForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2>Improve with AI</h2>
+            <p>Review the improved text before applying it.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="ai-review-grid">
+          <section>
+            <h3>Original</h3>
+            <div id="aiOriginalText" class="ai-review-box"></div>
+          </section>
+          <section>
+            <h3>Improved</h3>
+            <textarea id="aiImprovedText" rows="8"></textarea>
+          </section>
+        </div>
+        <section>
+          <h3>Suggestions</h3>
+          <div id="aiSuggestions" class="mini-list"></div>
+        </section>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Accept Changes</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog id="actionDialog" class="modal">
       <form id="actionForm" method="dialog" class="modal-form">
         <div class="modal-header">

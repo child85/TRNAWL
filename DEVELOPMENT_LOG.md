@@ -400,3 +400,14 @@ Changed:
 - Added drag handles to roadmap cards.
 - Dropping a roadmap item on another column updates its status.
 - Kept edit, delete, and complete actions available.
+
+### AI Note Improvement
+
+Added Improve with AI for operational text quality.
+
+Changed:
+
+- Added Azure Function API for Anthropic note improvement.
+- Added Improve with AI buttons to note and description fields.
+- Added review-before-accept dialog with suggestions.
+- Added Admin AI instruction settings.
