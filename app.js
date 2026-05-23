@@ -578,6 +578,17 @@ const developmentLog = [
     ],
     notes: ["The improved text still requires user review before applying."],
   },
+  {
+    date: "2026-05-23",
+    title: "Pitch package",
+    summary: "Updated README and added a short TRNAWL pitch PDF with live product screenshots.",
+    changes: [
+      "Refreshed README to reflect the current MVP, AI improvement, email rules, workflows, calendar, and project plan.",
+      "Captured live screenshots for dashboard, tickets, workflows, calendar, and admin.",
+      "Created a five-page pitch PDF for quick stakeholder review.",
+    ],
+    notes: ["The pitch PDF is stored in docs/TRNAWL_Pitch.pdf."],
+  },
 ];
 
 const ticketTypes = [

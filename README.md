@@ -1,211 +1,250 @@
 # TRNAWL
 
-TRNAWL is a lightweight operational workflow and accountability platform for project, SOW, delivery, and customer-action coordination.
+TRNAWL is a lightweight operational workflow and accountability platform for SOW, delivery review, internal task, and customer action coordination.
 
-It helps teams manage SOWs, delivery reviews, internal tasks, and customer actions without relying on scattered Excel files, Teams threads, email chains, and tribal knowledge. Users can create tickets, assign owners, set due dates, drag work through workflow stages, and receive reminders before work becomes overdue.
+It replaces scattered Excel trackers with a simple ticket board, customer context, workflow templates, reminders, blocker visibility, and AI-assisted text improvement. The goal is a Jira-like operational experience without Jira-level complexity.
 
 TRNAWL is not trying to replace Jira, ServiceNow, Planner, Teams, SharePoint, or email. It sits between delivery, sales, architecture, governance, and customer coordination to make execution visible.
 
-## Problem Statement
+## The Problem
 
-Most companies already have plenty of tools: Jira, ServiceNow, Planner, Excel, Teams, email, and SharePoint. Projects still fail operationally because coordination lives across spreadsheets, chats, emails, status calls, and memory.
+Most companies already have many tools and still lose operational control because coordination lives across:
+
+- Excel trackers
+- Teams chats
+- Emails
+- Status calls
+- Tribal knowledge
+- Hidden customer dependencies
 
 The core issue is not tooling. The core issue is execution visibility:
 
 - Who owns this?
-- Is delivery involved?
-- Are commercial inputs ready?
-- Did legal review it?
 - What is blocked?
-- Why is this delayed?
-- Which customer actions are still unresolved?
+- Which customer action is still open?
+- Is the SOW ready for delivery review?
+- Did legal, commercial, or scope review happen?
+- Which work is about to become overdue?
+- Who needs to act next?
 
-TRNAWL provides a Jira-like board where useful, but avoids Jira-like complexity. The first version should stay simple, clean, and focused on adoption.
+## What TRNAWL Does
 
-## Core Features
+TRNAWL gives teams a fast operational control board for delivery work:
 
-- Fast ticket creation for SOWs, delivery reviews, internal tasks, and customer actions
-- Clear ownership with Owner, Delivery Lead, Sales Lead, due dates, status, and priority
-- Drag-and-drop ticket board with simple workflow stages
-- Reminder support before tickets become overdue
-- Customer overview with tiles, basic customer records, related tickets, and customer actions
-- Delivery review tracking for handoffs, assumptions, risks, and follow-up actions
-- Operational visibility through dashboards, reports, and calendar views
-- Templates and configurable workflows for repeatable delivery processes
-- Lightweight governance checks for SOWs, delivery reviews, and customer-facing actions
-- Team capacity visibility for simple operational planning
-- Operational readiness scores for SOWs and delivery work
-- Blocked reason tracking with useful reporting categories
-- Customer action register with internal accountability
-- Weekly operational briefs for stale work, delayed reviews, and overloaded owners
+- Create tickets quickly
+- Assign a real owner
+- Set due dates and priority
+- Track customer context
+- Move work through status stages
+- Highlight blockers
+- Capture updates and history
+- Generate repeatable workflows
+- Send email notifications
+- Improve unclear notes with AI before they become bad tickets
 
-## AI-Assisted Ticket Enrichment
-
-TRNAWL should include an **Improve with AI** feature during ticket creation. AI is not a chatbot gimmick here; it is a governance layer that improves clarity, accountability, and operational quality.
-
-Before submitting a ticket, users can ask AI to improve the draft. The AI should:
-
-- Rephrase unclear input
-- Fix grammar and formatting
-- Structure the request into clearer ticket text
-- Suggest missing fields such as owner, due date, priority, workflow stage, or acceptance criteria
-- Flag missing operational context such as scope assumptions, commercial inputs, delivery feasibility, customer dependencies, or SLA risks
-- Preserve the user's intent
-- Show all proposed changes for review before the user accepts them
-
-The user stays in control. AI should enrich the ticket, not submit or change work without approval.
-
-Later AI capabilities should review active work for unrealistic assumptions, hidden scope gaps, staffing risks, SLA conflicts, stale tickets, and delayed reviews.
-
-## Workflow Philosophy
-
-The most valuable part of TRNAWL is not the ticket itself. It is the workflow.
-
-Workflows capture organizational experience:
-
-- How a new SOW should move from intake to delivery review
-- Which checks must happen before customer presentation
-- When sales input, legal input, delivery feasibility, and scope boundary checks are needed
-- Which customer actions should be created automatically
-- What operational risks should be visible early
-
-Example: a **New SOW Workflow** can automatically create delivery review, commercial input check, legal input check, scope boundary review, and customer deck review tasks. This turns repeated tribal knowledge into a repeatable operating model.
-
-## Operational Readiness
-
-TRNAWL should make readiness visible without becoming a checklist monster.
-
-Each SOW or delivery workflow should be able to show whether the basics are covered:
-
-- Scope boundaries clear
-- Customer dependencies listed
-- Due dates realistic
-- Success criteria clear
-- Delivery capacity realistic
-- Handoff plan clear
-
-Generic tasks and internal actions should not force this checklist. They should stay quick: owner, due date, context, and status.
-
-## Delivery Review Workflow
-
-The delivery review workflow should make handoffs and approvals easy to track.
-
-Example stages:
-
-1. Draft
-2. Ready for Review
-3. In Review
-4. Changes Requested
-5. Approved
-6. Delivered
-
-Each review ticket should support:
-
-- Reviewer assignment
-- Due dates and reminders
-- Linked customer or internal actions
-- Review notes
-- Approval status
-- Follow-up tasks
-
-## Navigation Concept
-
-Initial navigation should include:
-
-- Dashboard
-- Tickets
-- Customers
-- Calendar
-- Reports
-- Admin
-- Templates / Workflows
-
-The navigation should stay practical and familiar. Users should be able to move quickly between daily work, upcoming deadlines, reporting, and admin configuration.
-
-## MVP Scope
-
-The MVP should focus on a narrow, useful workflow:
-
-- Email/password sign-in through Supabase Auth
-- Create, edit, and delete tickets
-- Assign owners
-- Set due dates and priorities
-- Move tickets across workflow stages
-- Filter by owner, status, due date, and priority
-- Track blocked reasons such as delivery input, commercial input, legal input, customer dependency, unclear scope, missing owner, unresolved dependency, or pending approval
-- Show overdue and upcoming work
-- Support basic delivery review stages
-- Provide an **Improve with AI** review step before ticket submission
-- Offer a simple dashboard for operational visibility
-- Provide a New SOW workflow template that creates the minimum operational review tasks
-- Include a simple team capacity calendar focused on who is blocked, reserved, or overloaded
-- Include a customer action register
-- Generate a weekly operational brief from overdue work, stale actions, delayed reviews, and capacity pressure
+The product is designed for adoption. If updating a ticket feels slower than sending a Teams message, the tool loses.
 
 ## Current MVP
 
-The first deployable MVP is a static Azure Static Web Apps frontend backed by Supabase.
+The current MVP is a static Azure Static Web Apps frontend backed by Supabase, with an Azure Function for AI text improvement and a Cloudflare Worker for email delivery.
 
 Included now:
 
 - Supabase email/password authentication
 - Dashboard with open, overdue, blocked, and customer-action counts
+- Compact Priority Work tiles sorted by due date
+- Active Blockers tiles that open the relevant ticket
 - Drag-and-drop ticket board
-- Ticket creation with Owner, type-specific leads, optional customer, default due date, priority, blocked reason, initial status, and type-specific readiness checks
-- Ticket details with editable fields, readiness checks, blocked reason, status update, and working notes
-- Customer records with default Sales Lead
-- Admin user overview with manager and calendar color
-- Tickets view defaults to the current user's tickets with an owner filter
-- Calendar capacity board with role/name team filters, colored due tickets, and draggable people reservations
-- Selectable demo people and customers for ticket creation
-- Customers view with customer tiles, customer creation, and detail pages
-- Workflow template view
-- New SOW Workflow starter that creates review tickets
+- Ticket creation with owner, type, customer, due date, priority, blocked reason, and status
+- Ticket detail view with editable fields, readiness checks, updates, history, and delete
+- Customer records with tiles, detail pages, default Sales Lead, and related work
+- Admin user management with email, manager, role, and color
+- Mail notification settings and editable mail body previews
+- AI Settings for the Improve with AI instruction
+- Improve with AI for note and description fields, including title context and review-before-accept
+- Workflow templates, dependency settings, and workflow generation
+- New SOW workflow starter
 - Customer action register
-- Calendar view for upcoming ticket and customer-action due dates
-- Basic reports for weekly operational visibility
+- Calendar capacity planning with draggable people, role/name filters, bookings, and due work
+- Reports for operational briefs and selected data points
+- Project Plan roadmap with editable, deletable, completable, draggable roadmap items
 - Development log view with short change summaries
-- Admin/status page
 
-AI features are intentionally excluded from this first MVP.
+## Core Features
+
+### Tickets
+
+Tickets are intentionally simple. The primary fields are:
+
+- Title
+- Description
+- Type
+- Owner
+- Customer when relevant
+- Due date
+- Status
+- Priority
+- Blocked reason
+- Updates and history
+
+Generic internal tasks stay lightweight. SOW and customer-facing work can use readiness checks and workflow structure.
+
+### Customers
+
+Customers are first-class objects, not free text. Each customer can hold:
+
+- Segment
+- Status
+- Primary contact
+- Contact email
+- Sales Lead
+- Notes
+- Related tickets
+- Open customer actions
+
+### Workflows
+
+Workflows are the strongest long-term differentiator. They capture repeatable operational knowledge such as:
+
+- SOW intake
+- Delivery review
+- Commercial input check
+- Scope boundary review
+- Legal review
+- Customer deck or final review
+
+Workflow steps can have dependencies, so later work can be blocked until required previous steps are finished.
+
+### Blockers
+
+Blocked work is treated as escalation work, not passive reporting. Blocker tiles show:
+
+- Blocked reason
+- Ticket title
+- Owner
+- Due date
+- Customer context
+- Blocked age
+
+### Calendar
+
+The calendar is a lightweight capacity board, not a full MS Project replacement. It answers:
+
+- Who is booked?
+- For what work?
+- For which customer or task?
+- What is due soon?
+- Which team members are visible by role or search?
+
+### Email Notifications
+
+TRNAWL can send email through a backend endpoint, not directly from the browser.
+
+Current notification rules:
+
+- Task assigned
+- Due date approaching
+- Due date past
+- Task completed
+
+Recipients with blank email addresses are skipped automatically.
+
+### AI-Assisted Ticket Enrichment
+
+Improve with AI is a governance layer, not a chatbot gimmick.
+
+When a user writes unclear or messy input, TRNAWL can:
+
+- Translate to English if needed
+- Fix typos and grammar
+- Rephrase into clear operational language
+- Preserve intent
+- Use the ticket or form title as context
+- Suggest missing information
+- Let the user review the result before accepting it
+
+Example:
+
+```text
+scope is nicht ganz klar, delivery soll mal schauen ob wir das so machen koennen
+```
+
+Can become:
+
+```text
+Scope requires clarification. Delivery team to assess feasibility of proposed approach.
+```
+
+The user stays in control. AI does not submit or change work without approval.
+
+## Navigation
+
+Current navigation:
+
+- Dashboard
+- Tickets
+- Workflows
+- Customers
+- Customer Actions
+- Calendar
+- Reports
+- Project Plan
+- Dev Log
+- Admin
+
+## MVP Scope
+
+The MVP focuses on one useful promise:
+
+Give delivery and operations teams a fast way to see ownership, deadlines, blockers, customer actions, and repeatable review workflows.
+
+The MVP deliberately avoids:
+
+- Sprint planning complexity
+- Enterprise BPM complexity
+- ITSM replacement scope
+- Heavy field configuration
+- Overbuilt reporting
 
 ## Future Roadmap
 
-- Custom workflow builder
-- Ticket templates by process or customer
-- Calendar integrations
-- Email and chat reminders
-- SLA and due-date reporting
-- Bulk ticket import from spreadsheets
-- Saved views and team dashboards
+- Stronger workflow builder
+- Template management
+- SOW and at-a-glance templates
+- Template variables for customer, owner, due date, deal size, and review type
+- Approval paths by deal size, such as below 50k, above 50k, and above 100k
 - Customer-facing action views
 - Role-based permissions
-- Audit trail for delivery reviews
-- AI governance checks for scope gaps, delivery assumptions, staffing risks, stale work, and SLA conflicts
-- AI-generated summaries, risks, and next steps
-- Teams and Outlook ticket capture
+- Audit trail for review decisions
+- Saved views and team dashboards
+- Calendar integrations
+- Teams and Outlook capture
+- Bulk import from spreadsheets
+- AI review for scope gaps, delivery assumptions, staffing risks, stale work, and SLA conflicts
+- AI-generated weekly operational briefs
+- Blocker aging analytics
 - Customer health dashboard
-- Operational readiness score trends
-- Blocked reason aging analytics
-- AI weekly operational brief generation
 - API and webhook support
 
 ## Project Structure
 
 ```text
 TRNAWL/
-├── DEVELOPMENT_LOG.md
-├── app.js
+├── api/
+│   └── improve-note/
 ├── docs/
+│   ├── pitch-assets/
 │   ├── product-overview.md
 │   ├── product-strategy.md
 │   └── workflow.md
+├── supabase/
+│   └── migrations/
+├── DEVELOPMENT_LOG.md
 ├── index.html
+├── app.js
 ├── styles.css
 ├── staticwebapp.config.json
-├── supabase/
-│   ├── README.md
-│   └── migrations/
+├── .env.example
 ├── .gitignore
 ├── LICENSE
 └── README.md
@@ -213,9 +252,9 @@ TRNAWL/
 
 ## Setup
 
-This repository is intentionally lightweight. The current MVP is a static frontend and does not require a build step.
+This repository is intentionally lightweight. The static frontend does not require a build step.
 
-To get started locally:
+Clone the repository:
 
 ```bash
 git clone https://github.com/child85/TRNAWL.git
@@ -228,13 +267,31 @@ Run a local static server:
 python -m http.server 4173
 ```
 
-Then open:
+Open:
 
 ```text
 http://localhost:4173
 ```
 
-The deployed app expects Supabase to have the included migrations applied.
+The deployed app expects the Supabase migrations to be applied and the Azure Static Web Apps environment variables to be configured.
+
+## Environment Variables
+
+Frontend:
+
+```text
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+```
+
+Azure Function:
+
+```text
+ANTHROPIC_API_KEY=
+ANTHROPIC_MODEL=haiku
+```
+
+Email is sent through the configured Cloudflare Worker endpoint in `app.js`.
 
 ## Guiding Principles
 
@@ -242,7 +299,7 @@ The deployed app expects Supabase to have the included migrations applied.
 - Prioritize adoption over configuration depth
 - Make ticket creation fast
 - Make ownership and deadlines obvious
-- Let AI assist, but keep users in control
+- Make blockers impossible to miss
+- Let AI improve clarity, but keep users in control
 - Avoid Jira-level complexity unless users clearly need it
-- Do not become a Jira, ServiceNow, Monday.com, or full PM-suite clone
 - Focus on operational governance, execution visibility, and presales/delivery coordination

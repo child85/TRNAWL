@@ -462,3 +462,13 @@ Changed:
 - Send nearby title context with AI improvement requests.
 - Show a loading state on the Improve with AI button while the request runs.
 - Disable the active AI button during processing to avoid duplicate calls.
+
+### Pitch Package
+
+Updated README and added a short TRNAWL pitch PDF with live product screenshots.
+
+Changed:
+
+- Refreshed README to reflect the current MVP, AI improvement, email rules, workflows, calendar, and project plan.
+- Captured live screenshots for dashboard, tickets, workflows, calendar, and admin.
+- Created a five-page pitch PDF for quick stakeholder review.
