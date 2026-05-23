@@ -495,6 +495,17 @@ const developmentLog = [
     ],
     notes: ["Live emails now use the editable template wording."],
   },
+  {
+    date: "2026-05-22",
+    title: "Roadmap drag and drop",
+    summary: "Made Project Plan roadmap items draggable between status columns.",
+    changes: [
+      "Added drag handles to roadmap cards.",
+      "Dropping a roadmap item on another column updates its status.",
+      "Kept edit, delete, and complete actions available.",
+    ],
+    notes: ["Drag and drop updates the existing Supabase roadmap item."],
+  },
 ];
 
 const ticketTypes = [
@@ -3000,7 +3011,7 @@ function renderProjectPlan() {
     </div>
     <div class="roadmap-grid">
       ${projectPlanStatuses.map(([status, label]) => `
-        <section class="roadmap-column">
+        <section class="roadmap-column" data-status="${escapeHtml(status)}">
           <div class="roadmap-column-header">
             <h2>${escapeHtml(label)}</h2>
             <span class="pill">${state.projectPlanItems.filter((item) => item.status === status).length}</span>
@@ -3016,12 +3027,14 @@ function renderProjectPlan() {
   $$(".project-plan-edit").forEach((button) => button.addEventListener("click", () => openProjectPlanDialog(button.dataset.itemId)));
   $$(".project-plan-complete").forEach((button) => button.addEventListener("click", () => completeProjectPlanItem(button.dataset.itemId)));
   $$(".project-plan-delete").forEach((button) => button.addEventListener("click", () => deleteProjectPlanItem(button.dataset.itemId)));
+  bindProjectPlanDragAndDrop();
   refreshIcons();
 }
 
 function projectPlanCard(item) {
   return `
-    <article class="roadmap-card ${item.status === "done" ? "complete" : ""}">
+    <article class="roadmap-card ${item.status === "done" ? "complete" : ""}" draggable="true" data-item-id="${item.id}">
+      <div class="roadmap-drag-hint"><i data-lucide="grip-vertical"></i><span>Drag to move</span></div>
       <div class="tag-row">
         <span class="pill primary">${escapeHtml(labelFor(projectPlanCategories, item.category))}</span>
         <span class="pill">${escapeHtml(labelFor(projectPlanPriorities, item.priority))}</span>
@@ -3035,6 +3048,40 @@ function projectPlanCard(item) {
       </div>
     </article>
   `;
+}
+
+function bindProjectPlanDragAndDrop() {
+  $$(".roadmap-card").forEach((card) => {
+    card.addEventListener("dragstart", (event) => {
+      event.dataTransfer.setData("text/plain", card.dataset.itemId);
+    });
+  });
+
+  $$(".roadmap-column").forEach((column) => {
+    column.addEventListener("dragover", (event) => {
+      event.preventDefault();
+      column.classList.add("drop-target");
+    });
+    column.addEventListener("dragleave", () => column.classList.remove("drop-target"));
+    column.addEventListener("drop", async (event) => {
+      event.preventDefault();
+      column.classList.remove("drop-target");
+      await moveProjectPlanItem(event.dataTransfer.getData("text/plain"), column.dataset.status);
+    });
+  });
+}
+
+async function moveProjectPlanItem(itemId, status) {
+  const item = findById(state.projectPlanItems, itemId);
+  if (!item || !status || item.status === status) return;
+  try {
+    setSync("Moving roadmap item");
+    await api(`/project_plan_items?id=eq.${itemId}`, { method: "PATCH", body: { status } });
+    await loadData();
+    switchView("projectPlan");
+  } catch (error) {
+    setSync(error.message);
+  }
 }
 
 function openProjectPlanDialog(itemId = null) {

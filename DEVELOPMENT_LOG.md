@@ -390,3 +390,13 @@ Changed:
 - Added inline subject and body intro editing.
 - Added supported variables for ticket title, owner, customer, due date, blocker, and status.
 - Persisted mail template wording in browser storage for the MVP.
+
+### Roadmap Drag And Drop
+
+Made Project Plan roadmap items draggable between status columns.
+
+Changed:
+
+- Added drag handles to roadmap cards.
+- Dropping a roadmap item on another column updates its status.
+- Kept edit, delete, and complete actions available.

@@ -738,6 +738,11 @@ th {
   padding: 14px;
 }
 
+.roadmap-column.drop-target {
+  outline: 3px solid rgba(0, 103, 177, 0.2);
+  background: var(--primary-soft);
+}
+
 .roadmap-column-header {
   display: flex;
   justify-content: space-between;
@@ -762,10 +767,26 @@ th {
   border: 1px solid var(--line);
   border-top: 4px solid var(--primary);
   padding: 14px;
+  cursor: grab;
 }
 
 .roadmap-card.complete {
   border-top-color: var(--success);
+}
+
+.roadmap-drag-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.roadmap-drag-hint svg {
+  width: 16px;
+  height: 16px;
 }
 
 .roadmap-card h3 {
