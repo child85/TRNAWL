@@ -348,3 +348,14 @@ Changed:
 - Added preview cards under Mail Settings.
 - Show subject and body for assignment, due-soon, overdue, and completion emails.
 - Use the same email template helper as live notifications.
+
+### User Editing
+
+Added Admin editing for existing users.
+
+Changed:
+
+- Added Edit actions to the Admin user table.
+- Reused the user dialog for create and edit.
+- Allow editing name, role, email, manager, and color.
+- Added Supabase update policy for app people.

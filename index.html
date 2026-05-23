@@ -231,8 +231,8 @@
       <form id="personForm" method="dialog" class="modal-form">
         <div class="modal-header">
           <div>
-            <h2>Create User</h2>
-            <p>Add a selectable team member for ticket ownership, lead defaults, and calendar planning.</p>
+            <h2 id="personDialogTitle">Create User</h2>
+            <p id="personDialogSubtitle">Add a selectable team member for ticket ownership, lead defaults, and calendar planning.</p>
           </div>
           <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
         </div>
@@ -245,7 +245,7 @@
         </div>
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
-          <button class="primary-button" type="submit">Create User</button>
+          <button class="primary-button" type="submit" id="personSubmitButton">Create User</button>
         </div>
       </form>
     </dialog>

@@ -24,6 +24,7 @@ const state = {
   customers: [],
   selectedCustomerId: null,
   selectedTicketId: null,
+  selectedPersonId: null,
   selectedProjectPlanItemId: null,
   selectedWorkflowTemplateId: null,
   scratchWorkflowMode: false,
@@ -428,6 +429,18 @@ const developmentLog = [
     ],
     notes: ["Preview values are sample ticket values; live emails use the real ticket."],
   },
+  {
+    date: "2026-05-22",
+    title: "User editing",
+    summary: "Added Admin editing for existing users.",
+    changes: [
+      "Added Edit actions to the Admin user table.",
+      "Reused the user dialog for create and edit.",
+      "Allow editing name, role, email, manager, and color.",
+      "Added Supabase update policy for app people.",
+    ],
+    notes: ["This is needed so email recipients can be maintained after demo users are seeded."],
+  },
 ];
 
 const ticketTypes = [
@@ -595,7 +608,7 @@ function bindEvents() {
   $("#customerEditForm").addEventListener("submit", updateCustomer);
   $("#actionForm").addEventListener("submit", createCustomerAction);
   $("#actionCustomer").addEventListener("change", applyActionCustomerDefaults);
-  $("#personForm").addEventListener("submit", createPerson);
+  $("#personForm").addEventListener("submit", savePerson);
   $("#projectPlanForm").addEventListener("submit", saveProjectPlanItem);
 
   $$(".close-dialog").forEach((button) => {
@@ -1880,7 +1893,7 @@ async function updateCustomer(event) {
   }
 }
 
-async function createPerson(event) {
+async function savePerson(event) {
   event.preventDefault();
   const manager = findById(state.people, $("#personManager").value);
   const name = $("#personName").value.trim();
@@ -1889,22 +1902,24 @@ async function createPerson(event) {
   if (!name || !role) return;
 
   try {
-    setSync("Creating user");
-    await api("/app_people", {
-      method: "POST",
-      body: {
-        display_name: name,
-        role_label: role,
-        manager_id: manager?.id || null,
-        manager_name: manager?.display_name || null,
-        email: email || null,
-        color: $("#personColor").value || "#0067b1",
-        is_current_user: false,
-      },
-    });
+    const body = {
+      display_name: name,
+      role_label: role,
+      manager_id: manager?.id || null,
+      manager_name: manager?.display_name || null,
+      email: email || null,
+      color: $("#personColor").value || "#0067b1",
+    };
+    setSync(state.selectedPersonId ? "Saving user" : "Creating user");
+    if (state.selectedPersonId) {
+      await api(`/app_people?id=eq.${state.selectedPersonId}`, { method: "PATCH", body });
+    } else {
+      await api("/app_people", { method: "POST", body: { ...body, is_current_user: false } });
+    }
     $("#personForm").reset();
     $("#personColor").value = "#0067b1";
     $("#personDialog").close();
+    state.selectedPersonId = null;
     await loadData();
     switchView("admin");
   } catch (error) {
@@ -3032,7 +3047,7 @@ function renderAdmin() {
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Manager</th><th>Color</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Manager</th><th>Color</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody>
               ${state.people.map((person) => `
                 <tr>
@@ -3042,6 +3057,7 @@ function renderAdmin() {
                   <td>${escapeHtml(person.manager_name || "None")}</td>
                   <td><span class="color-chip" style="--person-color: ${escapeHtml(person.color || "#0067b1")}"></span></td>
                   <td>${person.is_current_user ? `<span class="pill primary">Default user</span>` : `<span class="pill">Demo user</span>`}</td>
+                  <td><button class="secondary-button compact-button edit-person-button" type="button" data-person-id="${person.id}"><i data-lucide="pencil"></i><span>Edit</span></button></td>
                 </tr>
               `).join("")}
             </tbody>
@@ -3092,6 +3108,9 @@ function renderAdmin() {
     </div>
   `;
   $("#addPersonButton").addEventListener("click", openPersonDialog);
+  $$(".edit-person-button").forEach((button) => {
+    button.addEventListener("click", () => openPersonDialog(button.dataset.personId));
+  });
   $$('input[name="mailRule"]').forEach((input) => {
     input.addEventListener("change", () => {
       state.mailSettings[input.value] = input.checked;
@@ -3101,10 +3120,19 @@ function renderAdmin() {
   $("#deleteAllTicketsButton").addEventListener("click", deleteAllTickets);
 }
 
-function openPersonDialog() {
+function openPersonDialog(personId = null) {
+  const person = findById(state.people, personId);
+  state.selectedPersonId = person?.id || null;
   $("#personForm").reset();
-  $("#personColor").value = "#0067b1";
   syncObjectSelects();
+  $("#personDialogTitle").textContent = person ? "Edit User" : "Create User";
+  $("#personDialogSubtitle").textContent = person ? "Update user details used for assignment, notifications, and planning." : "Add a selectable team member for ticket ownership, lead defaults, and calendar planning.";
+  $("#personSubmitButton").textContent = person ? "Save User" : "Create User";
+  $("#personName").value = person?.display_name || "";
+  $("#personRole").value = person?.role_label || "";
+  $("#personEmail").value = person?.email || "";
+  $("#personManager").value = person?.manager_id || "";
+  $("#personColor").value = person?.color || "#0067b1";
   $("#personDialog").showModal();
 }
 
