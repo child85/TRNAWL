@@ -522,6 +522,17 @@ const developmentLog = [
     ],
     notes: ["The API key stays server-side in Azure Static Web Apps environment variables."],
   },
+  {
+    date: "2026-05-23",
+    title: "Priority work cards",
+    summary: "Changed dashboard Priority Work from a table into visual due-date cards.",
+    changes: [
+      "Replaced the Excel-like Priority Work table with scan-friendly cards.",
+      "Added due-date urgency labels for overdue, due today, due soon, and undated work.",
+      "Kept sorting by due date while making each item easier to read.",
+    ],
+    notes: ["Related customer tickets still use the compact table where a list is useful."],
+  },
 ];
 
 const ticketTypes = [
@@ -1133,7 +1144,7 @@ function renderDashboard() {
     <div class="content-grid">
       <section class="panel">
         <h2>Priority Work</h2>
-        ${ticketTable(priorityTickets)}
+        ${priorityWorkCards(priorityTickets)}
       </section>
       <section class="panel">
         <h2>Active Blockers</h2>
@@ -1167,6 +1178,46 @@ function ticketTable(tickets) {
       </table>
     </div>
   `;
+}
+
+function priorityWorkCards(tickets) {
+  if (!tickets.length) return `<div class="empty-state">No priority work yet.</div>`;
+  return `
+    <div class="priority-work-grid">
+      ${tickets.map((ticket) => `
+        <article class="priority-work-card ${priorityWorkTone(ticket)}">
+          <div class="priority-card-top">
+            <span class="due-badge">${escapeHtml(dueLabel(ticket.due_date))}</span>
+            <span class="pill">${escapeHtml(labelFor(ticketTypes, ticket.ticket_type))}</span>
+          </div>
+          <h3>${escapeHtml(ticket.title)}</h3>
+          <div class="priority-card-meta">
+            <span><strong>Owner</strong>${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span>
+            <span><strong>Due</strong>${escapeHtml(formatDate(ticket.due_date))}</span>
+          </div>
+          <div class="tag-row">${ticketPills(ticket)}</div>
+          <button class="secondary-button ticket-detail-button" type="button" data-ticket-id="${ticket.id}">Details</button>
+        </article>
+      `).join("")}
+    </div>
+  `;
+}
+
+function priorityWorkTone(ticket) {
+  const days = daysUntil(ticket.due_date);
+  if (!ticket.due_date) return "undated";
+  if (days < 0) return "overdue";
+  if (days <= 2) return "soon";
+  return "";
+}
+
+function dueLabel(dateString) {
+  if (!dateString) return "No due date";
+  const days = daysUntil(dateString);
+  if (days < 0) return `Overdue ${Math.abs(days)}d`;
+  if (days === 0) return "Due today";
+  if (days === 1) return "Due tomorrow";
+  return `Due in ${days}d`;
 }
 
 function ticketsByDueDate(tickets) {

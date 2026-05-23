@@ -1294,6 +1294,72 @@ th {
   text-transform: uppercase;
 }
 
+.priority-work-grid {
+  display: grid;
+  gap: 10px;
+}
+
+.priority-work-card {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  border-left: 5px solid var(--primary);
+  background: #fff;
+  padding: 14px;
+}
+
+.priority-work-card.overdue {
+  border-left-color: var(--danger);
+  background: linear-gradient(90deg, var(--danger-soft), #ffffff 72%);
+}
+
+.priority-work-card.soon {
+  border-left-color: var(--warning);
+  background: linear-gradient(90deg, var(--warning-soft), #ffffff 72%);
+}
+
+.priority-work-card.undated {
+  border-left-color: #94a3b8;
+}
+
+.priority-card-top,
+.priority-card-meta {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.priority-work-card h3 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 16px;
+  line-height: 1.3;
+}
+
+.priority-card-meta span {
+  display: grid;
+  gap: 2px;
+  min-width: 110px;
+  color: var(--text);
+}
+
+.priority-card-meta strong {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.due-badge {
+  color: var(--primary-strong);
+  background: var(--primary-soft);
+  border-left: 3px solid var(--primary);
+  padding: 6px 9px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
 .empty-state {
   color: var(--muted);
   border: 1px dashed #a7bdd2;

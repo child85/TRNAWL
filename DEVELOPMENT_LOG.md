@@ -411,3 +411,13 @@ Changed:
 - Added Improve with AI buttons to note and description fields.
 - Added review-before-accept dialog with suggestions.
 - Added Admin AI instruction settings.
+
+### Priority Work Cards
+
+Changed dashboard Priority Work from a table into visual due-date cards.
+
+Changed:
+
+- Replaced the Excel-like Priority Work table with scan-friendly cards.
+- Added due-date urgency labels for overdue, due today, due soon, and undated work.
+- Kept sorting by due date while making each item easier to read.
