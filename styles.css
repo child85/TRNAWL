@@ -690,9 +690,25 @@ th {
   padding: 14px;
 }
 
+.mail-preview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .mail-preview-card h4 {
   margin: 10px 0;
   color: var(--navy);
+}
+
+.mail-template-editor {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 12px;
+  margin-bottom: 12px;
 }
 
 .mail-preview-body {

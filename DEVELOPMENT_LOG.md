@@ -379,3 +379,14 @@ Changed:
 - Changed Calendar from 2 weeks to 4 weeks.
 - Updated demo user colors to a broader readable palette.
 - Kept the overall UI restrained while making calendar ownership easier to scan.
+
+### Editable Mail Templates
+
+Added edit controls for mail preview templates in Admin.
+
+Changed:
+
+- Added Edit buttons to each mail preview.
+- Added inline subject and body intro editing.
+- Added supported variables for ticket title, owner, customer, due date, blocker, and status.
+- Persisted mail template wording in browser storage for the MVP.

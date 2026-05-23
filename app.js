@@ -9,6 +9,25 @@ const defaultMailSettings = {
   completedSales: true,
 };
 
+const defaultMailTemplates = {
+  assignedToOwner: {
+    subject: "TRNAWL assigned: {{title}}",
+    intro: "This ticket was assigned to you.",
+  },
+  dueApproachingOwner: {
+    subject: "TRNAWL due soon: {{title}}",
+    intro: "This ticket is due {{dueDate}}.",
+  },
+  overdueEscalation: {
+    subject: "TRNAWL overdue: {{title}}",
+    intro: "This ticket is overdue. Please review ownership, blocker status, and next action.",
+  },
+  completedSales: {
+    subject: "TRNAWL completed: {{title}}",
+    intro: "This ticket was marked completed.",
+  },
+};
+
 const state = {
   session: JSON.parse(localStorage.getItem("trnawl.session") || "null"),
   user: null,
@@ -39,6 +58,7 @@ const state = {
   reportFocus: "delivery",
   reportDataPoints: ["summary", "blocked", "overdue", "dueSoon", "customerActions"],
   mailSettings: JSON.parse(localStorage.getItem("trnawl.mailSettings") || JSON.stringify(defaultMailSettings)),
+  mailTemplates: { ...defaultMailTemplates, ...JSON.parse(localStorage.getItem("trnawl.mailTemplates") || "{}") },
   sentMailKeys: JSON.parse(localStorage.getItem("trnawl.sentMailKeys") || "{}"),
   calendarReservations: JSON.parse(localStorage.getItem("trnawl.calendarReservations") || "[]"),
   pendingCalendarReservation: null,
@@ -462,6 +482,18 @@ const developmentLog = [
       "Kept the overall UI restrained while making calendar ownership easier to scan.",
     ],
     notes: ["User colors remain editable in Admin."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Editable mail templates",
+    summary: "Added edit controls for mail preview templates in Admin.",
+    changes: [
+      "Added Edit buttons to each mail preview.",
+      "Added inline subject and body intro editing.",
+      "Added supported variables for ticket title, owner, customer, due date, blocker, and status.",
+      "Persisted mail template wording in browser storage for the MVP.",
+    ],
+    notes: ["Live emails now use the editable template wording."],
   },
 ];
 
@@ -2766,11 +2798,12 @@ async function sendAssignmentMail(ticket, reason) {
   if (!mailRuleEnabled("assignedToOwner")) return;
   const owner = personForTicketOwner(ticket);
   const key = `assigned:${ticket.id}:${ticket.work_owner_id || ticket.work_owner_name || "none"}:${reason}`;
+  const mail = mailContent("assignedToOwner", ticket);
   await sendTicketMail({
     key,
     people: [owner],
-    subject: `TRNAWL assigned: ${ticket.title}`,
-    intro: `This ticket was ${reason === "created" ? "created and assigned" : "assigned"} to you.`,
+    subject: mail.subject,
+    intro: mail.intro,
     ticket,
   });
 }
@@ -2778,11 +2811,12 @@ async function sendAssignmentMail(ticket, reason) {
 async function sendDueApproachingMail(ticket) {
   const owner = personForTicketOwner(ticket);
   const key = `due-soon:${ticket.id}:${ticket.due_date}`;
+  const mail = mailContent("dueApproachingOwner", ticket);
   await sendTicketMail({
     key,
     people: [owner],
-    subject: `TRNAWL due soon: ${ticket.title}`,
-    intro: `This ticket is due ${formatDate(ticket.due_date)}.`,
+    subject: mail.subject,
+    intro: mail.intro,
     ticket,
   });
 }
@@ -2793,11 +2827,12 @@ async function sendOverdueMail(ticket) {
   const salesLead = personForIdOrName(ticket.sales_lead_id, ticket.sales_lead_name);
   const today = new Date().toISOString().slice(0, 10);
   const key = `overdue:${ticket.id}:${today}`;
+  const mail = mailContent("overdueEscalation", ticket);
   await sendTicketMail({
     key,
     people: [owner, manager, salesLead],
-    subject: `TRNAWL overdue: ${ticket.title}`,
-    intro: "This ticket is overdue. Please review ownership, blocker status, and next action.",
+    subject: mail.subject,
+    intro: mail.intro,
     ticket,
   });
 }
@@ -2806,11 +2841,12 @@ async function sendCompletedMail(ticket) {
   if (!mailRuleEnabled("completedSales")) return;
   const salesLead = personForIdOrName(ticket.sales_lead_id, ticket.sales_lead_name);
   const key = `completed:${ticket.id}:${ticket.status_stage_id}`;
+  const mail = mailContent("completedSales", ticket);
   await sendTicketMail({
     key,
     people: [salesLead],
-    subject: `TRNAWL completed: ${ticket.title}`,
-    intro: "This ticket was marked completed.",
+    subject: mail.subject,
+    intro: mail.intro,
     ticket,
   });
 }
@@ -2889,30 +2925,53 @@ function personForIdOrName(id, name) {
   return state.people.find((person) => person.id === id) || state.people.find((person) => person.display_name === name) || null;
 }
 
+function mailContent(templateId, ticket) {
+  const template = mailTemplate(templateId);
+  return {
+    subject: renderMailTemplate(template.subject, ticket),
+    intro: renderMailTemplate(template.intro, ticket),
+  };
+}
+
+function mailTemplate(templateId) {
+  return { ...defaultMailTemplates[templateId], ...(state.mailTemplates[templateId] || {}) };
+}
+
+function renderMailTemplate(text, ticket) {
+  const stage = findById(state.stages, ticket.status_stage_id);
+  const values = {
+    title: ticket.title || "",
+    owner: ticket.work_owner_name || ticket.owner_name || "Unassigned",
+    customer: ticket.customer_name || "None",
+    dueDate: formatDate(ticket.due_date),
+    blockedReason: labelFor(blockedReasons, ticket.blocked_reason) || "Not blocked",
+    status: stage?.name || "No status",
+  };
+  return Object.entries(values).reduce((output, [key, value]) => output.replaceAll(`{{${key}}}`, value), text || "");
+}
+
+function saveMailTemplates() {
+  localStorage.setItem("trnawl.mailTemplates", JSON.stringify(state.mailTemplates));
+}
+
+function supportedMailVariables() {
+  return ["{{title}}", "{{owner}}", "{{customer}}", "{{dueDate}}", "{{blockedReason}}", "{{status}}"];
+}
+
 function mailPreviewDefinitions() {
   const sampleTicket = sampleMailTicket();
-  return [
-    {
-      event: "Task assigned",
-      subject: `TRNAWL assigned: ${sampleTicket.title}`,
-      html: ticketEmailHtml("This ticket was created and assigned to you.", sampleTicket),
-    },
-    {
-      event: "Due date approaching",
-      subject: `TRNAWL due soon: ${sampleTicket.title}`,
-      html: ticketEmailHtml(`This ticket is due ${formatDate(sampleTicket.due_date)}.`, sampleTicket),
-    },
-    {
-      event: "Due date past",
-      subject: `TRNAWL overdue: ${sampleTicket.title}`,
-      html: ticketEmailHtml("This ticket is overdue. Please review ownership, blocker status, and next action.", sampleTicket),
-    },
-    {
-      event: "Task completed",
-      subject: `TRNAWL completed: ${sampleTicket.title}`,
-      html: ticketEmailHtml("This ticket was marked completed.", sampleTicket),
-    },
-  ];
+  return mailRuleDefinitions().map((rule) => {
+    const content = mailContent(rule.id, sampleTicket);
+    const template = mailTemplate(rule.id);
+    return {
+      id: rule.id,
+      event: rule.title,
+      subject: content.subject,
+      html: ticketEmailHtml(content.intro, sampleTicket),
+      templateSubject: template.subject,
+      templateIntro: template.intro,
+    };
+  });
 }
 
 function sampleMailTicket() {
@@ -3124,9 +3183,23 @@ function renderAdmin() {
           <p class="muted">This is the body TRNAWL sends for each event. Live emails use the actual ticket values.</p>
           <div class="mail-preview-grid">
             ${mailPreviewDefinitions().map((preview) => `
-              <article class="mail-preview-card">
-                <span class="pill primary">${escapeHtml(preview.event)}</span>
+              <article class="mail-preview-card" data-template-id="${escapeHtml(preview.id)}">
+                <div class="mail-preview-header">
+                  <span class="pill primary">${escapeHtml(preview.event)}</span>
+                  <button class="secondary-button compact-button edit-mail-template-button" type="button" data-template-id="${escapeHtml(preview.id)}"><i data-lucide="pencil"></i><span>Edit</span></button>
+                </div>
                 <h4>${escapeHtml(preview.subject)}</h4>
+                <div class="mail-template-editor hidden" id="mailTemplateEditor-${escapeHtml(preview.id)}">
+                  <label>Subject<input class="mail-template-subject" data-template-id="${escapeHtml(preview.id)}" value="${escapeHtml(preview.templateSubject)}" /></label>
+                  <label>Body intro<textarea class="mail-template-intro" data-template-id="${escapeHtml(preview.id)}" rows="3">${escapeHtml(preview.templateIntro)}</textarea></label>
+                  <div class="tag-row">
+                    ${supportedMailVariables().map((variable) => `<span class="pill">${escapeHtml(variable)}</span>`).join("")}
+                  </div>
+                  <div class="card-actions">
+                    <button class="primary-button compact-button save-mail-template-button" type="button" data-template-id="${escapeHtml(preview.id)}">Save Template</button>
+                    <button class="secondary-button compact-button reset-mail-template-button" type="button" data-template-id="${escapeHtml(preview.id)}">Reset</button>
+                  </div>
+                </div>
                 <div class="mail-preview-body">${preview.html}</div>
               </article>
             `).join("")}
@@ -3145,6 +3218,7 @@ function renderAdmin() {
     </div>
   `;
   $("#addPersonButton").addEventListener("click", openPersonDialog);
+  bindMailTemplateEditors();
   $$(".edit-person-button").forEach((button) => {
     button.addEventListener("click", () => openPersonDialog(button.dataset.personId));
   });
@@ -3175,6 +3249,32 @@ function openPersonDialog(personId = null) {
 
 function personCanReceiveEmail(person) {
   return Boolean(person?.email?.trim());
+}
+
+function bindMailTemplateEditors() {
+  $$(".edit-mail-template-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      $(`#mailTemplateEditor-${button.dataset.templateId}`)?.classList.toggle("hidden");
+    });
+  });
+  $$(".save-mail-template-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const templateId = button.dataset.templateId;
+      state.mailTemplates[templateId] = {
+        subject: $(`.mail-template-subject[data-template-id="${templateId}"]`).value,
+        intro: $(`.mail-template-intro[data-template-id="${templateId}"]`).value,
+      };
+      saveMailTemplates();
+      renderAdmin();
+    });
+  });
+  $$(".reset-mail-template-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      delete state.mailTemplates[button.dataset.templateId];
+      saveMailTemplates();
+      renderAdmin();
+    });
+  });
 }
 
 function labelFor(options, value) {
