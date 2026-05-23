@@ -1362,6 +1362,11 @@ th {
   font-weight: 700;
 }
 
+.priority-card-meta b {
+  color: var(--navy);
+  font-weight: 900;
+}
+
 .due-badge {
   color: var(--primary-strong);
   background: var(--primary-soft);

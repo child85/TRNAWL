@@ -1227,7 +1227,7 @@ function priorityWorkCards(tickets) {
           <strong>${escapeHtml(ticket.title)}</strong>
           <div class="priority-card-meta">
             <span>${escapeHtml(ticket.customer_name || "No customer")}</span>
-            <small>Owner: ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")} · due ${escapeHtml(formatDate(ticket.due_date))}</small>
+            <small>Owner: ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")} · due <b>${escapeHtml(formatDate(ticket.due_date))}</b></small>
             ${ticket.blocked_reason ? `<small>${escapeHtml(labelFor(blockedReasons, ticket.blocked_reason))}</small>` : ""}
           </div>
         </button>
