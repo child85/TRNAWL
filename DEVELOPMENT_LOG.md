@@ -327,3 +327,14 @@ Changed:
 - Added Cloudflare Worker email sending through the TRNAWL email API.
 - Added assignment and completion email triggers on ticket changes.
 - Added deduped due-date and overdue email checks when the app syncs.
+
+### Project Plan Roadmap
+
+Added a Project Plan navigation area for managing roadmap items.
+
+Changed:
+
+- Added Project Plan to navigation.
+- Seeded roadmap items for template management, SOW templates, At-a-glance templates, phrasing variables, and approval paths.
+- Added create, edit, delete, and complete actions for roadmap items.
+- Stored roadmap items in Supabase.

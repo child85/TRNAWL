@@ -667,6 +667,67 @@ th {
   margin-top: 14px;
 }
 
+.roadmap-summary {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.roadmap-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.roadmap-column {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  min-width: 0;
+  padding: 14px;
+}
+
+.roadmap-column-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.roadmap-column-header h2 {
+  margin: 0;
+  color: var(--navy);
+  font-size: 18px;
+}
+
+.roadmap-list {
+  display: grid;
+  gap: 12px;
+}
+
+.roadmap-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-top: 4px solid var(--primary);
+  padding: 14px;
+}
+
+.roadmap-card.complete {
+  border-top-color: var(--success);
+}
+
+.roadmap-card h3 {
+  margin: 10px 0 8px;
+  color: var(--navy);
+  font-size: 16px;
+}
+
+.roadmap-card p {
+  margin: 0 0 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
 .template-grid {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
 }
@@ -1459,6 +1520,7 @@ th {
   .customer-tile-grid,
   .customer-info-grid,
   .report-builder-grid,
+  .roadmap-grid,
   .capacity-layout,
   .ticket-detail-layout {
     grid-template-columns: 1fr 1fr;

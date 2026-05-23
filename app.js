@@ -19,10 +19,12 @@ const state = {
   templateTasks: [],
   customerActions: [],
   ticketComments: [],
+  projectPlanItems: [],
   people: [],
   customers: [],
   selectedCustomerId: null,
   selectedTicketId: null,
+  selectedProjectPlanItemId: null,
   selectedWorkflowTemplateId: null,
   scratchWorkflowMode: false,
   ticketSettingsUnlocked: false,
@@ -49,6 +51,7 @@ const viewMeta = {
   actions: ["Customer Actions", "External dependencies with internal accountability."],
   calendar: ["Calendar", "Upcoming work, due dates, and customer follow-ups."],
   reports: ["Reports", "Blocked work, aging, readiness, and customer action visibility."],
+  projectPlan: ["Project Plan", "Roadmap for templates, approvals, workflow logic, and adoption improvements."],
   devlog: ["Dev Log", "Short record of what changed during development."],
   admin: ["Admin", "Runtime status and project configuration."],
 };
@@ -402,6 +405,18 @@ const developmentLog = [
     ],
     notes: ["Recipients with blank user email addresses are skipped."],
   },
+  {
+    date: "2026-05-22",
+    title: "Project plan roadmap",
+    summary: "Added a Project Plan navigation area for managing roadmap items.",
+    changes: [
+      "Added Project Plan to navigation.",
+      "Seeded roadmap items for template management, SOW templates, At-a-glance templates, phrasing variables, and approval paths.",
+      "Added create, edit, delete, and complete actions for roadmap items.",
+      "Stored roadmap items in Supabase.",
+    ],
+    notes: ["The project plan is intended as a living roadmap, not a delivery ticket board."],
+  },
 ];
 
 const ticketTypes = [
@@ -443,6 +458,26 @@ const customerStatuses = [
   ["active", "Active"],
   ["paused", "Paused"],
   ["inactive", "Inactive"],
+];
+
+const projectPlanCategories = [
+  ["templates", "Template management"],
+  ["content", "Content and phrasing"],
+  ["approval", "Approval paths"],
+  ["workflow", "Workflow logic"],
+  ["adoption", "Adoption"],
+];
+
+const projectPlanStatuses = [
+  ["planned", "Planned"],
+  ["in_progress", "In progress"],
+  ["done", "Complete"],
+];
+
+const projectPlanPriorities = [
+  ["low", "Low"],
+  ["medium", "Medium"],
+  ["high", "High"],
 ];
 
 const ticketTypeRules = {
@@ -504,6 +539,9 @@ function init() {
   fillSelect($("#ticketBlockedReason"), blockedReasons);
   fillSelect($("#actionStatus"), actionStatuses);
   fillSelect($("#customerStatus"), customerStatuses);
+  fillSelect($("#projectPlanCategory"), projectPlanCategories);
+  fillSelect($("#projectPlanStatus"), projectPlanStatuses);
+  fillSelect($("#projectPlanPriority"), projectPlanPriorities, "medium");
   applyTicketTypeRules();
   bindEvents();
   renderShell();
@@ -547,6 +585,7 @@ function bindEvents() {
   $("#actionForm").addEventListener("submit", createCustomerAction);
   $("#actionCustomer").addEventListener("change", applyActionCustomerDefaults);
   $("#personForm").addEventListener("submit", createPerson);
+  $("#projectPlanForm").addEventListener("submit", saveProjectPlanItem);
 
   $$(".close-dialog").forEach((button) => {
     button.addEventListener("click", () => button.closest("dialog").close());
@@ -808,13 +847,14 @@ async function loadData() {
   if (!state.session) return;
   setSync("Syncing");
   try {
-    const [stages, tickets, templates, templateTasks, customerActions, ticketComments, people, customers] = await Promise.all([
+    const [stages, tickets, templates, templateTasks, customerActions, ticketComments, projectPlanItems, people, customers] = await Promise.all([
       api("/workflow_stages?select=*&order=stage_type.asc,position.asc"),
       api("/tickets?select=*&order=created_at.desc"),
       api("/workflow_templates?select=*&order=name.asc"),
       api("/workflow_template_tasks?select=*&order=position.asc"),
       api("/customer_actions?select=*&order=created_at.desc"),
       api("/ticket_comments?select=*&order=created_at.asc"),
+      api("/project_plan_items?select=*&order=status.asc,priority.desc,created_at.asc"),
       api("/app_people?select=*&order=is_current_user.desc,display_name.asc"),
       api("/customers?select=*&order=name.asc"),
     ]);
@@ -824,6 +864,7 @@ async function loadData() {
     state.templateTasks = templateTasks;
     state.customerActions = customerActions;
     state.ticketComments = ticketComments;
+    state.projectPlanItems = projectPlanItems;
     state.people = people;
     state.customers = customers;
     syncObjectSelects();
@@ -892,6 +933,7 @@ function renderAll() {
   renderCustomerActions();
   renderCalendar();
   renderReports();
+  renderProjectPlan();
   renderDevLog();
   renderAdmin();
   refreshIcons();
@@ -2782,6 +2824,117 @@ function personForTicketOwner(ticket) {
 
 function personForIdOrName(id, name) {
   return state.people.find((person) => person.id === id) || state.people.find((person) => person.display_name === name) || null;
+}
+
+function renderProjectPlan() {
+  const openItems = state.projectPlanItems.filter((item) => item.status !== "done");
+  const doneItems = state.projectPlanItems.filter((item) => item.status === "done");
+  $("#projectPlanView").innerHTML = `
+    <div class="toolbar">
+      <div class="roadmap-summary">
+        <span class="pill primary">${openItems.length} open</span>
+        <span class="pill success">${doneItems.length} complete</span>
+      </div>
+      <button class="primary-button" type="button" id="addProjectPlanItemButton"><i data-lucide="plus"></i><span>Roadmap Item</span></button>
+    </div>
+    <div class="roadmap-grid">
+      ${projectPlanStatuses.map(([status, label]) => `
+        <section class="roadmap-column">
+          <div class="roadmap-column-header">
+            <h2>${escapeHtml(label)}</h2>
+            <span class="pill">${state.projectPlanItems.filter((item) => item.status === status).length}</span>
+          </div>
+          <div class="roadmap-list">
+            ${state.projectPlanItems.filter((item) => item.status === status).map(projectPlanCard).join("") || `<div class="empty-state">No items.</div>`}
+          </div>
+        </section>
+      `).join("")}
+    </div>
+  `;
+  $("#addProjectPlanItemButton").addEventListener("click", () => openProjectPlanDialog());
+  $$(".project-plan-edit").forEach((button) => button.addEventListener("click", () => openProjectPlanDialog(button.dataset.itemId)));
+  $$(".project-plan-complete").forEach((button) => button.addEventListener("click", () => completeProjectPlanItem(button.dataset.itemId)));
+  $$(".project-plan-delete").forEach((button) => button.addEventListener("click", () => deleteProjectPlanItem(button.dataset.itemId)));
+  refreshIcons();
+}
+
+function projectPlanCard(item) {
+  return `
+    <article class="roadmap-card ${item.status === "done" ? "complete" : ""}">
+      <div class="tag-row">
+        <span class="pill primary">${escapeHtml(labelFor(projectPlanCategories, item.category))}</span>
+        <span class="pill">${escapeHtml(labelFor(projectPlanPriorities, item.priority))}</span>
+      </div>
+      <h3>${escapeHtml(item.title)}</h3>
+      <p>${escapeHtml(item.description || "No description")}</p>
+      <div class="card-actions">
+        ${item.status !== "done" ? `<button class="secondary-button compact-button project-plan-complete" type="button" data-item-id="${item.id}"><i data-lucide="check"></i><span>Complete</span></button>` : ""}
+        <button class="secondary-button compact-button project-plan-edit" type="button" data-item-id="${item.id}"><i data-lucide="pencil"></i><span>Edit</span></button>
+        <button class="danger-button compact-button project-plan-delete" type="button" data-item-id="${item.id}"><i data-lucide="trash-2"></i><span>Delete</span></button>
+      </div>
+    </article>
+  `;
+}
+
+function openProjectPlanDialog(itemId = null) {
+  const item = findById(state.projectPlanItems, itemId);
+  state.selectedProjectPlanItemId = item?.id || null;
+  $("#projectPlanDialogTitle").textContent = item ? "Edit Roadmap Item" : "Add Roadmap Item";
+  $("#projectPlanTitle").value = item?.title || "";
+  $("#projectPlanDescription").value = item?.description || "";
+  $("#projectPlanCategory").value = item?.category || "templates";
+  $("#projectPlanStatus").value = item?.status || "planned";
+  $("#projectPlanPriority").value = item?.priority || "medium";
+  $("#projectPlanDialog").showModal();
+}
+
+async function saveProjectPlanItem(event) {
+  event.preventDefault();
+  const body = {
+    title: $("#projectPlanTitle").value.trim(),
+    description: $("#projectPlanDescription").value.trim() || null,
+    category: $("#projectPlanCategory").value,
+    status: $("#projectPlanStatus").value,
+    priority: $("#projectPlanPriority").value,
+  };
+  if (!body.title) return;
+  try {
+    setSync("Saving roadmap");
+    if (state.selectedProjectPlanItemId) {
+      await api(`/project_plan_items?id=eq.${state.selectedProjectPlanItemId}`, { method: "PATCH", body });
+    } else {
+      await api("/project_plan_items", { method: "POST", body });
+    }
+    $("#projectPlanDialog").close();
+    state.selectedProjectPlanItemId = null;
+    await loadData();
+    switchView("projectPlan");
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+async function completeProjectPlanItem(itemId) {
+  try {
+    setSync("Completing roadmap item");
+    await api(`/project_plan_items?id=eq.${itemId}`, { method: "PATCH", body: { status: "done" } });
+    await loadData();
+    switchView("projectPlan");
+  } catch (error) {
+    setSync(error.message);
+  }
+}
+
+async function deleteProjectPlanItem(itemId) {
+  if (!confirm("Delete this roadmap item?")) return;
+  try {
+    setSync("Deleting roadmap item");
+    await api(`/project_plan_items?id=eq.${itemId}`, { method: "DELETE" });
+    await loadData();
+    switchView("projectPlan");
+  } catch (error) {
+    setSync(error.message);
+  }
 }
 
 function renderDevLog() {

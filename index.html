@@ -52,6 +52,7 @@
           <button class="nav-item" data-view="actions"><i data-lucide="clipboard-check"></i><span>Customer Actions</span></button>
           <button class="nav-item" data-view="calendar"><i data-lucide="calendar-days"></i><span>Calendar</span></button>
           <button class="nav-item" data-view="reports"><i data-lucide="bar-chart-3"></i><span>Reports</span></button>
+          <button class="nav-item" data-view="projectPlan"><i data-lucide="map"></i><span>Project Plan</span></button>
           <button class="nav-item" data-view="devlog"><i data-lucide="file-clock"></i><span>Dev Log</span></button>
           <button class="nav-item" data-view="admin"><i data-lucide="settings"></i><span>Admin</span></button>
         </nav>
@@ -77,6 +78,7 @@
         <section id="actionsView" class="view"></section>
         <section id="calendarView" class="view"></section>
         <section id="reportsView" class="view"></section>
+        <section id="projectPlanView" class="view"></section>
         <section id="devlogView" class="view"></section>
         <section id="adminView" class="view"></section>
       </main>
@@ -308,6 +310,29 @@
         <div class="modal-actions">
           <button class="secondary-button close-dialog" type="button">Cancel</button>
           <button class="primary-button" type="submit">Save Customer</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="projectPlanDialog" class="modal">
+      <form id="projectPlanForm" method="dialog" class="modal-form">
+        <div class="modal-header">
+          <div>
+            <h2 id="projectPlanDialogTitle">Add Roadmap Item</h2>
+            <p>Capture roadmap work, decisions, template improvements, and approval-process changes.</p>
+          </div>
+          <button class="icon-button close-dialog" type="button" title="Close"><i data-lucide="x"></i></button>
+        </div>
+        <div class="form-grid">
+          <label>Title<input id="projectPlanTitle" required /></label>
+          <label>Category<select id="projectPlanCategory"></select></label>
+          <label>Status<select id="projectPlanStatus"></select></label>
+          <label>Priority<select id="projectPlanPriority"></select></label>
+          <label class="span-2">Description<textarea id="projectPlanDescription" rows="4"></textarea></label>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-button close-dialog" type="button">Cancel</button>
+          <button class="primary-button" type="submit">Save Roadmap Item</button>
         </div>
       </form>
     </dialog>
