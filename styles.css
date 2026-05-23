@@ -643,6 +643,30 @@ th {
   color: var(--primary-strong);
 }
 
+.mail-rule-list {
+  display: grid;
+  gap: 10px;
+}
+
+.mail-rule {
+  grid-template-columns: auto 1fr;
+  align-items: flex-start;
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 12px;
+}
+
+.mail-rule small {
+  display: block;
+  color: var(--muted);
+  font-weight: 500;
+  margin-top: 3px;
+}
+
+.mail-settings-meta {
+  margin-top: 14px;
+}
+
 .template-grid {
   grid-template-columns: repeat(3, minmax(220px, 1fr));
 }

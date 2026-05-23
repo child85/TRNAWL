@@ -316,3 +316,14 @@ Changed:
 - Seeded Thomas with thomasfecke263@gmail.com.
 - Show email status in Admin users.
 - Added helper logic so blank user emails are treated as not sendable.
+
+### Mail Notification Rules
+
+Added configurable email notification rules for assignment, due dates, overdue escalation, and completion.
+
+Changed:
+
+- Added Admin mail settings with rule toggles.
+- Added Cloudflare Worker email sending through the TRNAWL email API.
+- Added assignment and completion email triggers on ticket changes.
+- Added deduped due-date and overdue email checks when the app syncs.

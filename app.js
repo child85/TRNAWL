@@ -1,5 +1,13 @@
 const SUPABASE_URL = "https://ofwwpmnjbbojdznnbxpl.supabase.co";
 const SUPABASE_KEY = "sb_publishable_kcTEx8ODCrU3tO7LpeVxVw_ytPxlDRA";
+const EMAIL_WORKER_URL = "https://trnawl-email-api.thomasfecke263.workers.dev/";
+
+const defaultMailSettings = {
+  assignedToOwner: true,
+  dueApproachingOwner: true,
+  overdueEscalation: true,
+  completedSales: true,
+};
 
 const state = {
   session: JSON.parse(localStorage.getItem("trnawl.session") || "null"),
@@ -27,6 +35,8 @@ const state = {
   reportOwnerFilter: "me",
   reportFocus: "delivery",
   reportDataPoints: ["summary", "blocked", "overdue", "dueSoon", "customerActions"],
+  mailSettings: JSON.parse(localStorage.getItem("trnawl.mailSettings") || JSON.stringify(defaultMailSettings)),
+  sentMailKeys: JSON.parse(localStorage.getItem("trnawl.sentMailKeys") || "{}"),
   calendarReservations: JSON.parse(localStorage.getItem("trnawl.calendarReservations") || "[]"),
   pendingCalendarReservation: null,
 };
@@ -379,6 +389,18 @@ const developmentLog = [
       "Added helper logic so blank user emails are treated as not sendable.",
     ],
     notes: ["Demo users stay blank until real addresses are added."],
+  },
+  {
+    date: "2026-05-22",
+    title: "Mail notification rules",
+    summary: "Added configurable email notification rules for assignment, due dates, overdue escalation, and completion.",
+    changes: [
+      "Added Admin mail settings with rule toggles.",
+      "Added Cloudflare Worker email sending through the TRNAWL email API.",
+      "Added assignment and completion email triggers on ticket changes.",
+      "Added deduped due-date and overdue email checks when the app syncs.",
+    ],
+    notes: ["Recipients with blank user email addresses are skipped."],
   },
 ];
 
@@ -806,6 +828,7 @@ async function loadData() {
     state.customers = customers;
     syncObjectSelects();
     renderAll();
+    await runScheduledMailChecks();
     setSync("Ready");
   } catch (error) {
     setSync(error.message);
@@ -1084,10 +1107,12 @@ function bindTicketDetailButtons() {
 async function updateTicketStage(ticketId, stageId) {
   try {
     setSync("Saving");
+    const previousTicket = findById(state.tickets, ticketId);
     await api(`/tickets?id=eq.${ticketId}`, {
       method: "PATCH",
       body: { status_stage_id: stageId },
     });
+    await handleTicketChangeMail(previousTicket, { ...previousTicket, status_stage_id: stageId });
     await loadData();
   } catch (error) {
     setSync(error.message);
@@ -1133,6 +1158,7 @@ function openTicketDetails(ticketId) {
 async function updateTicketDetails(event) {
   event.preventDefault();
   if (!state.selectedTicketId) return;
+  const previousTicket = findById(state.tickets, state.selectedTicketId);
   const ticketType = $("#ticketDetailType").value;
   const rules = ticketTypeRules[ticketType] || ticketTypeRules.task;
   const owner = findById(state.people, $("#ticketDetailOwner").value);
@@ -1145,33 +1171,36 @@ async function updateTicketDetails(event) {
   try {
     setSync("Saving");
     const updateText = $("#ticketCommentText").value.trim();
+    const ticketPatch = {
+      title: $("#ticketDetailTitleInput").value.trim(),
+      description: $("#ticketDetailDescription").value.trim() || null,
+      ticket_type: ticketType,
+      priority: $("#ticketDetailPriority").value,
+      work_owner_id: owner?.id || null,
+      work_owner_name: owner?.display_name || null,
+      owner_name: owner?.display_name || null,
+      delivery_lead_id: deliveryLead?.id || null,
+      delivery_lead_name: deliveryLead?.display_name || null,
+      sales_lead_id: salesLead?.id || null,
+      sales_lead_name: salesLead?.display_name || null,
+      customer_id: customer?.id || null,
+      customer_name: customer?.name || null,
+      due_date: $("#ticketDetailDueDate").value || null,
+      status_stage_id: $("#ticketDetailStatus").value || null,
+      blocked_reason: $("#ticketDetailBlockedReason").value || null,
+      blocked_since: $("#ticketDetailBlockedReason").value ? new Date().toISOString() : null,
+      readiness_checks: readiness,
+      readiness_score: readinessScore,
+    };
+    const updatedTicket = { ...previousTicket, ...ticketPatch };
     await api(`/tickets?id=eq.${state.selectedTicketId}`, {
       method: "PATCH",
-      body: {
-        title: $("#ticketDetailTitleInput").value.trim(),
-        description: $("#ticketDetailDescription").value.trim() || null,
-        ticket_type: ticketType,
-        priority: $("#ticketDetailPriority").value,
-        work_owner_id: owner?.id || null,
-        work_owner_name: owner?.display_name || null,
-        owner_name: owner?.display_name || null,
-        delivery_lead_id: deliveryLead?.id || null,
-        delivery_lead_name: deliveryLead?.display_name || null,
-        sales_lead_id: salesLead?.id || null,
-        sales_lead_name: salesLead?.display_name || null,
-        customer_id: customer?.id || null,
-        customer_name: customer?.name || null,
-        due_date: $("#ticketDetailDueDate").value || null,
-        status_stage_id: $("#ticketDetailStatus").value || null,
-        blocked_reason: $("#ticketDetailBlockedReason").value || null,
-        blocked_since: $("#ticketDetailBlockedReason").value ? new Date().toISOString() : null,
-        readiness_checks: readiness,
-        readiness_score: readinessScore,
-      },
+      body: ticketPatch,
     });
     if (updateText) {
       await saveTicketComment(updateText);
     }
+    await handleTicketChangeMail(previousTicket, updatedTicket);
     $("#ticketDetailDialog").close();
     await loadData();
   } catch (error) {
@@ -1309,7 +1338,8 @@ async function createTicket(event) {
 
   try {
     setSync("Creating");
-    await api("/tickets", { method: "POST", body });
+    const [createdTicket] = await api("/tickets", { method: "POST", body });
+    await sendAssignmentMail(createdTicket, "created");
     $("#ticketForm").reset();
     $("#ticketPriority").value = "medium";
     syncObjectSelects();
@@ -2556,6 +2586,204 @@ async function copyReportText() {
   await navigator.clipboard?.writeText(text);
 }
 
+function mailRuleDefinitions() {
+  return [
+    {
+      id: "assignedToOwner",
+      title: "Task assigned",
+      description: "Send an email to the assigned owner when a ticket is created or reassigned to them.",
+    },
+    {
+      id: "dueApproachingOwner",
+      title: "Due date approaching",
+      description: "Send an email to the owner when an active ticket is due within the next 2 days.",
+    },
+    {
+      id: "overdueEscalation",
+      title: "Due date past",
+      description: "Send an email to the owner, their manager, and the Sales Lead when an active ticket becomes overdue.",
+    },
+    {
+      id: "completedSales",
+      title: "Task completed",
+      description: "Send an email to the Sales Lead when a ticket is completed.",
+    },
+  ];
+}
+
+function mailRuleEnabled(ruleId) {
+  return state.mailSettings[ruleId] !== false;
+}
+
+function saveMailSettings() {
+  localStorage.setItem("trnawl.mailSettings", JSON.stringify(state.mailSettings));
+}
+
+function saveSentMailKeys() {
+  localStorage.setItem("trnawl.sentMailKeys", JSON.stringify(state.sentMailKeys));
+}
+
+function mailAlreadySent(key) {
+  return Boolean(state.sentMailKeys[key]);
+}
+
+function markMailSent(key) {
+  state.sentMailKeys[key] = new Date().toISOString();
+  saveSentMailKeys();
+}
+
+async function handleTicketChangeMail(previousTicket, currentTicket) {
+  if (!previousTicket || !currentTicket) return;
+  const ownerChanged = previousTicket.work_owner_id !== currentTicket.work_owner_id || previousTicket.work_owner_name !== currentTicket.work_owner_name;
+  if (ownerChanged) {
+    await sendAssignmentMail(currentTicket, "reassigned");
+  }
+
+  if (!isDoneTicket(previousTicket) && isDoneTicket(currentTicket)) {
+    await sendCompletedMail(currentTicket);
+  }
+}
+
+async function runScheduledMailChecks() {
+  const activeTickets = state.tickets.filter((ticket) => !isDoneTicket(ticket));
+  for (const ticket of activeTickets) {
+    const days = daysUntil(ticket.due_date);
+    if (mailRuleEnabled("dueApproachingOwner") && days >= 0 && days <= 2) {
+      await sendDueApproachingMail(ticket);
+    }
+    if (mailRuleEnabled("overdueEscalation") && days < 0) {
+      await sendOverdueMail(ticket);
+    }
+  }
+}
+
+async function sendAssignmentMail(ticket, reason) {
+  if (!mailRuleEnabled("assignedToOwner")) return;
+  const owner = personForTicketOwner(ticket);
+  const key = `assigned:${ticket.id}:${ticket.work_owner_id || ticket.work_owner_name || "none"}:${reason}`;
+  await sendTicketMail({
+    key,
+    people: [owner],
+    subject: `TRNAWL assigned: ${ticket.title}`,
+    intro: `This ticket was ${reason === "created" ? "created and assigned" : "assigned"} to you.`,
+    ticket,
+  });
+}
+
+async function sendDueApproachingMail(ticket) {
+  const owner = personForTicketOwner(ticket);
+  const key = `due-soon:${ticket.id}:${ticket.due_date}`;
+  await sendTicketMail({
+    key,
+    people: [owner],
+    subject: `TRNAWL due soon: ${ticket.title}`,
+    intro: `This ticket is due ${formatDate(ticket.due_date)}.`,
+    ticket,
+  });
+}
+
+async function sendOverdueMail(ticket) {
+  const owner = personForTicketOwner(ticket);
+  const manager = owner ? personForIdOrName(owner.manager_id, owner.manager_name) : null;
+  const salesLead = personForIdOrName(ticket.sales_lead_id, ticket.sales_lead_name);
+  const today = new Date().toISOString().slice(0, 10);
+  const key = `overdue:${ticket.id}:${today}`;
+  await sendTicketMail({
+    key,
+    people: [owner, manager, salesLead],
+    subject: `TRNAWL overdue: ${ticket.title}`,
+    intro: "This ticket is overdue. Please review ownership, blocker status, and next action.",
+    ticket,
+  });
+}
+
+async function sendCompletedMail(ticket) {
+  if (!mailRuleEnabled("completedSales")) return;
+  const salesLead = personForIdOrName(ticket.sales_lead_id, ticket.sales_lead_name);
+  const key = `completed:${ticket.id}:${ticket.status_stage_id}`;
+  await sendTicketMail({
+    key,
+    people: [salesLead],
+    subject: `TRNAWL completed: ${ticket.title}`,
+    intro: "This ticket was marked completed.",
+    ticket,
+  });
+}
+
+async function sendTicketMail({ key, people, subject, intro, ticket }) {
+  if (mailAlreadySent(key)) return;
+  const recipients = uniqueEmailPeople(people);
+  if (!recipients.length) return;
+
+  const html = ticketEmailHtml(intro, ticket);
+  let sent = false;
+  for (const person of recipients) {
+    try {
+      await sendEmail(person.email, subject, html);
+      sent = true;
+    } catch (error) {
+      console.warn(error);
+    }
+  }
+  if (sent) {
+    markMailSent(key);
+  }
+}
+
+async function sendEmail(to, subject, html) {
+  if (!to) return;
+  const response = await fetch(EMAIL_WORKER_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ to, subject, html }),
+  });
+  if (!response.ok) {
+    throw new Error(`Email failed: ${response.status}`);
+  }
+}
+
+function ticketEmailHtml(intro, ticket) {
+  return `
+    <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.5;">
+      <h2 style="color:#003a70;">${escapeHtml(ticket.title)}</h2>
+      <p>${escapeHtml(intro)}</p>
+      <table style="border-collapse: collapse; margin-top: 12px;">
+        ${emailRow("Owner", ticket.work_owner_name || ticket.owner_name || "Unassigned")}
+        ${emailRow("Customer", ticket.customer_name || "None")}
+        ${emailRow("Due date", formatDate(ticket.due_date))}
+        ${emailRow("Blocked reason", labelFor(blockedReasons, ticket.blocked_reason) || "Not blocked")}
+        ${emailRow("Status", findById(state.stages, ticket.status_stage_id)?.name || "No status")}
+      </table>
+      <p style="margin-top:16px;"><a href="https://trnawl.feckelabs.com" style="color:#0067b1;">Open TRNAWL</a></p>
+    </div>
+  `;
+}
+
+function emailRow(label, value) {
+  return `
+    <tr>
+      <td style="font-weight:700; padding:4px 16px 4px 0;">${escapeHtml(label)}</td>
+      <td style="padding:4px 0;">${escapeHtml(value || "")}</td>
+    </tr>
+  `;
+}
+
+function uniqueEmailPeople(people) {
+  return [...new Map(
+    people
+      .filter(personCanReceiveEmail)
+      .map((person) => [person.email.trim().toLowerCase(), person])
+  ).values()];
+}
+
+function personForTicketOwner(ticket) {
+  return personForIdOrName(ticket.work_owner_id, ticket.work_owner_name || ticket.owner_name);
+}
+
+function personForIdOrName(id, name) {
+  return state.people.find((person) => person.id === id) || state.people.find((person) => person.display_name === name) || null;
+}
+
 function renderDevLog() {
   $("#devlogView").innerHTML = `
     <div class="report-grid">
@@ -2617,6 +2845,29 @@ function renderAdmin() {
           </table>
         </div>
       </section>
+      <section class="panel">
+        <div class="panel-heading">
+          <div>
+            <h2>Mail Settings</h2>
+            <p class="muted">Choose which ticket events send email through the TRNAWL email Worker.</p>
+          </div>
+        </div>
+        <div class="mail-rule-list">
+          ${mailRuleDefinitions().map((rule) => `
+            <label class="mail-rule">
+              <input type="checkbox" name="mailRule" value="${escapeHtml(rule.id)}" ${mailRuleEnabled(rule.id) ? "checked" : ""} />
+              <span>
+                <strong>${escapeHtml(rule.title)}</strong>
+                <small>${escapeHtml(rule.description)}</small>
+              </span>
+            </label>
+          `).join("")}
+        </div>
+        <div class="mini-list mail-settings-meta">
+          <div><strong>Email endpoint</strong><br><span class="muted">${escapeHtml(EMAIL_WORKER_URL)}</span></div>
+          <div><strong>Recipient rule</strong><br><span class="muted">Users without an email address are skipped automatically.</span></div>
+        </div>
+      </section>
       <section class="panel danger-zone">
         <h2>Danger Zone</h2>
         <p class="muted">For MVP cleanup only. This permanently deletes every ticket, including ticket updates and workflow links.</p>
@@ -2625,6 +2876,12 @@ function renderAdmin() {
     </div>
   `;
   $("#addPersonButton").addEventListener("click", openPersonDialog);
+  $$('input[name="mailRule"]').forEach((input) => {
+    input.addEventListener("change", () => {
+      state.mailSettings[input.value] = input.checked;
+      saveMailSettings();
+    });
+  });
   $("#deleteAllTicketsButton").addEventListener("click", deleteAllTickets);
 }
 
