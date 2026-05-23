@@ -539,6 +539,7 @@ const developmentLog = [
     summary: "Stabilized the Improve with AI backend model mapping.",
     changes: [
       "Mapped Haiku settings to a stable Anthropic model snapshot.",
+      "Added fallback to Claude 3 Haiku if the configured key cannot access Claude 3.5 Haiku.",
       "Kept friendly Admin values like haiku working for Azure environment variables.",
     ],
     notes: ["This protects the note improvement API from brittle model aliases."],

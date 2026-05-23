@@ -429,4 +429,5 @@ Stabilized the Improve with AI backend model mapping.
 Changed:
 
 - Mapped Haiku settings to a stable Anthropic model snapshot.
+- Added fallback to Claude 3 Haiku if the configured key cannot access Claude 3.5 Haiku.
 - Kept friendly Admin values like haiku working for Azure environment variables.
