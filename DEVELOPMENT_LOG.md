@@ -452,3 +452,13 @@ Changed:
 - Changed Priority Work items into compact clickable tiles.
 - Collapsed owner, due date, and customer into short metadata lines.
 - Removed the oversized Details button from each item.
+
+### AI Improvement Feedback
+
+Improved the Improve with AI interaction and title context.
+
+Changed:
+
+- Send nearby title context with AI improvement requests.
+- Show a loading state on the Improve with AI button while the request runs.
+- Disable the active AI button during processing to avoid duplicate calls.

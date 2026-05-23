@@ -22,6 +22,7 @@ module.exports = async function improveNote(context, req) {
     }
 
     const input = String(req.body?.text || "").trim();
+    const title = String(req.body?.title || "").trim();
     const instruction = String(req.body?.instruction || "").trim();
     if (!input) {
       context.res = jsonResponse(400, { error: "Text is required." });
@@ -55,11 +56,13 @@ module.exports = async function improveNote(context, req) {
             {
               role: "user",
               content: [
-                instruction || "Rephrase into clear business English. Translate to English if needed. Fix typos. Preserve intent. If important delivery details are missing, list them as suggestions.",
-                "",
-                "Text:",
-                input,
-              ].join("\n"),
+              instruction || "Rephrase into clear business English. Translate to English if needed. Fix typos. Preserve intent. If important delivery details are missing, list them as suggestions.",
+              "",
+              title ? `Title context: ${title}` : "Title context: Not provided",
+              "",
+              "Text:",
+              input,
+            ].join("\n"),
             },
           ],
         }),

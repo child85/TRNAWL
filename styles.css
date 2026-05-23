@@ -153,6 +153,21 @@ textarea:focus {
   margin-top: -2px;
 }
 
+.ai-improve-button.is-loading {
+  opacity: 0.82;
+  cursor: wait;
+}
+
+.ai-improve-button.is-loading svg {
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .auth-actions,
 .topbar-actions,
 .modal-actions,

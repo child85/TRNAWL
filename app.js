@@ -567,6 +567,17 @@ const developmentLog = [
     ],
     notes: ["Clicking a priority tile still opens ticket details."],
   },
+  {
+    date: "2026-05-23",
+    title: "AI improvement feedback",
+    summary: "Improved the Improve with AI interaction and title context.",
+    changes: [
+      "Send nearby title context with AI improvement requests.",
+      "Show a loading state on the Improve with AI button while the request runs.",
+      "Disable the active AI button during processing to avoid duplicate calls.",
+    ],
+    notes: ["The improved text still requires user review before applying."],
+  },
 ];
 
 const ticketTypes = [
@@ -783,12 +794,16 @@ async function improveTextWithAi(targetId) {
   const textarea = $(`#${targetId}`);
   const text = textarea?.value.trim();
   if (!textarea || !text) return;
+  const button = $(`.ai-improve-button[data-target-id="${targetId}"]`);
+  const title = aiContextTitle(targetId);
+  const originalButtonHtml = button?.innerHTML;
   try {
+    setAiImproveLoading(button, true);
     setSync("Improving text");
     const response = await fetch("/api/improve-note", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, instruction: state.aiInstruction }),
+      body: JSON.stringify({ title, text, instruction: state.aiInstruction }),
     });
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || "AI improvement failed.");
@@ -803,7 +818,33 @@ async function improveTextWithAi(targetId) {
     setSync("Ready");
   } catch (error) {
     setSync(error.message);
+  } finally {
+    setAiImproveLoading(button, false, originalButtonHtml);
   }
+}
+
+function setAiImproveLoading(button, isLoading, originalHtml = "") {
+  if (!button) return;
+  button.disabled = isLoading;
+  button.classList.toggle("is-loading", isLoading);
+  button.innerHTML = isLoading
+    ? `<i data-lucide="loader-circle"></i><span>Improving...</span>`
+    : originalHtml || `<i data-lucide="sparkles"></i><span>Improve with AI</span>`;
+  lucide.createIcons();
+}
+
+function aiContextTitle(targetId) {
+  const titleByTarget = {
+    ticketDescription: "#ticketTitle",
+    ticketDetailDescription: "#ticketDetailTitleInput",
+    ticketCommentText: "#ticketDetailTitleInput",
+    customerNotes: "#customerName",
+    customerEditNotes: "#customerEditName",
+    calendarBookingNote: "#calendarBookingTaskSearch",
+    projectPlanDescription: "#projectPlanTitle",
+  };
+  const selector = titleByTarget[targetId];
+  return selector ? $(`${selector}`)?.value?.trim() || "" : "";
 }
 
 function acceptAiImprovement(event) {
