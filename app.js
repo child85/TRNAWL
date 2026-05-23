@@ -441,6 +441,17 @@ const developmentLog = [
     ],
     notes: ["This is needed so email recipients can be maintained after demo users are seeded."],
   },
+  {
+    date: "2026-05-22",
+    title: "Priority work sorting",
+    summary: "Changed dashboard Priority Work into a due-date driven view.",
+    changes: [
+      "Sorted Priority Work by due date instead of mixing status-based urgency.",
+      "Excluded done tickets from the list.",
+      "Kept blocker status focused in Active Blockers.",
+    ],
+    notes: ["Overdue work still appears first because it has the oldest due dates."],
+  },
 ];
 
 const ticketTypes = [
@@ -975,8 +986,7 @@ function renderDashboard() {
   const activeTickets = state.tickets.filter((ticket) => !isDoneTicket(ticket));
   const overdue = activeTickets.filter(isOverdue);
   const blocked = activeTickets.filter((ticket) => ticket.blocked_reason);
-  const dueSoon = activeTickets.filter((ticket) => daysUntil(ticket.due_date) >= 0 && daysUntil(ticket.due_date) <= 7);
-  const priorityTickets = uniqueTickets([...overdue, ...blocked, ...dueSoon]).slice(0, 8);
+  const priorityTickets = ticketsByDueDate(activeTickets).slice(0, 8);
   const openActions = state.customerActions.filter((action) => !["done", "cancelled"].includes(action.status));
 
   $("#dashboardView").innerHTML = `
@@ -1023,6 +1033,22 @@ function ticketTable(tickets) {
       </table>
     </div>
   `;
+}
+
+function ticketsByDueDate(tickets) {
+  return [...tickets].sort((a, b) => {
+    const aTime = dueDateTime(a.due_date);
+    const bTime = dueDateTime(b.due_date);
+    if (aTime !== bTime) return aTime - bTime;
+    return (a.title || "").localeCompare(b.title || "");
+  });
+}
+
+function dueDateTime(dateString) {
+  if (!dateString) return Number.POSITIVE_INFINITY;
+  const date = new Date(`${dateString}T00:00:00`);
+  const time = date.getTime();
+  return Number.isNaN(time) ? Number.POSITIVE_INFINITY : time;
 }
 
 function blockedReasonList() {

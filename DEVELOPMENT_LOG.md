@@ -359,3 +359,13 @@ Changed:
 - Reused the user dialog for create and edit.
 - Allow editing name, role, email, manager, and color.
 - Added Supabase update policy for app people.
+
+### Priority Work Sorting
+
+Changed dashboard Priority Work into a due-date driven view.
+
+Changed:
+
+- Sorted Priority Work by due date instead of mixing status-based urgency.
+- Excluded done tickets from the list.
+- Kept blocker status focused in Active Blockers.
