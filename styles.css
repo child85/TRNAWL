@@ -667,6 +667,42 @@ th {
   margin-top: 14px;
 }
 
+.mail-preview-panel {
+  margin-top: 18px;
+}
+
+.mail-preview-panel h3 {
+  margin: 0 0 6px;
+  color: var(--navy);
+  font-size: 17px;
+}
+
+.mail-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.mail-preview-card {
+  border: 1px solid var(--line);
+  background: #fff;
+  padding: 14px;
+}
+
+.mail-preview-card h4 {
+  margin: 10px 0;
+  color: var(--navy);
+}
+
+.mail-preview-body {
+  border: 1px solid var(--line);
+  background: var(--surface-soft);
+  padding: 12px;
+  max-height: 260px;
+  overflow: auto;
+}
+
 .roadmap-summary {
   display: flex;
   gap: 8px;
@@ -1521,6 +1557,7 @@ th {
   .customer-info-grid,
   .report-builder-grid,
   .roadmap-grid,
+  .mail-preview-grid,
   .capacity-layout,
   .ticket-detail-layout {
     grid-template-columns: 1fr 1fr;

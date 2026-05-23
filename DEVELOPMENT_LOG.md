@@ -338,3 +338,13 @@ Changed:
 - Seeded roadmap items for template management, SOW templates, At-a-glance templates, phrasing variables, and approval paths.
 - Added create, edit, delete, and complete actions for roadmap items.
 - Stored roadmap items in Supabase.
+
+### Mail Body Previews
+
+Added Admin previews for every configured mail notification body.
+
+Changed:
+
+- Added preview cards under Mail Settings.
+- Show subject and body for assignment, due-soon, overdue, and completion emails.
+- Use the same email template helper as live notifications.

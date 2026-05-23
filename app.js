@@ -417,6 +417,17 @@ const developmentLog = [
     ],
     notes: ["The project plan is intended as a living roadmap, not a delivery ticket board."],
   },
+  {
+    date: "2026-05-22",
+    title: "Mail body previews",
+    summary: "Added Admin previews for every configured mail notification body.",
+    changes: [
+      "Added preview cards under Mail Settings.",
+      "Show subject and body for assignment, due-soon, overdue, and completion emails.",
+      "Use the same email template helper as live notifications.",
+    ],
+    notes: ["Preview values are sample ticket values; live emails use the real ticket."],
+  },
 ];
 
 const ticketTypes = [
@@ -2826,6 +2837,45 @@ function personForIdOrName(id, name) {
   return state.people.find((person) => person.id === id) || state.people.find((person) => person.display_name === name) || null;
 }
 
+function mailPreviewDefinitions() {
+  const sampleTicket = sampleMailTicket();
+  return [
+    {
+      event: "Task assigned",
+      subject: `TRNAWL assigned: ${sampleTicket.title}`,
+      html: ticketEmailHtml("This ticket was created and assigned to you.", sampleTicket),
+    },
+    {
+      event: "Due date approaching",
+      subject: `TRNAWL due soon: ${sampleTicket.title}`,
+      html: ticketEmailHtml(`This ticket is due ${formatDate(sampleTicket.due_date)}.`, sampleTicket),
+    },
+    {
+      event: "Due date past",
+      subject: `TRNAWL overdue: ${sampleTicket.title}`,
+      html: ticketEmailHtml("This ticket is overdue. Please review ownership, blocker status, and next action.", sampleTicket),
+    },
+    {
+      event: "Task completed",
+      subject: `TRNAWL completed: ${sampleTicket.title}`,
+      html: ticketEmailHtml("This ticket was marked completed.", sampleTicket),
+    },
+  ];
+}
+
+function sampleMailTicket() {
+  const stage = state.stages.find((item) => item.stage_type === "ticket" && item.name === "In Progress") || state.stages.find((item) => item.stage_type === "ticket");
+  return {
+    title: "Acme Anvils Ltd.: Scope Boundary Review",
+    work_owner_name: "Thomas",
+    owner_name: "Thomas",
+    customer_name: "Acme Anvils Ltd.",
+    due_date: isoDateFromToday(2),
+    blocked_reason: "scope_unclear",
+    status_stage_id: stage?.id || null,
+  };
+}
+
 function renderProjectPlan() {
   const openItems = state.projectPlanItems.filter((item) => item.status !== "done");
   const doneItems = state.projectPlanItems.filter((item) => item.status === "done");
@@ -3016,6 +3066,19 @@ function renderAdmin() {
             </label>
           `).join("")}
         </div>
+        <section class="mail-preview-panel">
+          <h3>Mail Preview</h3>
+          <p class="muted">This is the body TRNAWL sends for each event. Live emails use the actual ticket values.</p>
+          <div class="mail-preview-grid">
+            ${mailPreviewDefinitions().map((preview) => `
+              <article class="mail-preview-card">
+                <span class="pill primary">${escapeHtml(preview.event)}</span>
+                <h4>${escapeHtml(preview.subject)}</h4>
+                <div class="mail-preview-body">${preview.html}</div>
+              </article>
+            `).join("")}
+          </div>
+        </section>
         <div class="mini-list mail-settings-meta">
           <div><strong>Email endpoint</strong><br><span class="muted">${escapeHtml(EMAIL_WORKER_URL)}</span></div>
           <div><strong>Recipient rule</strong><br><span class="muted">Users without an email address are skipped automatically.</span></div>
