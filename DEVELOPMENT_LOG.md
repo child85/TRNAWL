@@ -430,4 +430,5 @@ Changed:
 
 - Mapped Haiku settings to a stable Anthropic model snapshot.
 - Added fallback to Claude 3 Haiku if the configured key cannot access Claude 3.5 Haiku.
+- Added Anthropic model discovery so the backend can use a model visible to the configured key.
 - Kept friendly Admin values like haiku working for Azure environment variables.

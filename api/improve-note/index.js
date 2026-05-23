@@ -2,7 +2,7 @@ const MODEL_ALIASES = {
   haiku: "claude-3-5-haiku-20241022",
   "claude-3-5-haiku-latest": "claude-3-5-haiku-20241022",
   "haiku-3": "claude-3-haiku-20240307",
-  sonnet: "claude-sonnet-4-5",
+  sonnet: "claude-sonnet-4-20250514",
 };
 
 function resolveModel(value) {
@@ -28,7 +28,7 @@ module.exports = async function improveNote(context, req) {
       return;
     }
 
-    const modelsToTry = fallbackModels(resolveModel(process.env.ANTHROPIC_MODEL));
+    const modelsToTry = await fallbackModels(apiKey, resolveModel(process.env.ANTHROPIC_MODEL));
     let model = modelsToTry[0];
     let payload = null;
     let response = null;
@@ -86,8 +86,33 @@ module.exports = async function improveNote(context, req) {
   }
 };
 
-function fallbackModels(model) {
-  return [...new Set([model, "claude-3-haiku-20240307"])];
+async function fallbackModels(apiKey, model) {
+  const discoveredModels = await discoverModels(apiKey);
+  const discoveredHaiku = discoveredModels.filter((item) => item.includes("haiku"));
+  const discoveredSonnet = discoveredModels.filter((item) => item.includes("sonnet"));
+  return [...new Set([
+    model,
+    "claude-3-5-haiku-20241022",
+    "claude-3-haiku-20240307",
+    ...discoveredHaiku,
+    ...discoveredSonnet,
+  ])];
+}
+
+async function discoverModels(apiKey) {
+  try {
+    const response = await fetch("https://api.anthropic.com/v1/models", {
+      headers: {
+        "x-api-key": apiKey,
+        "anthropic-version": "2023-06-01",
+      },
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return Array.isArray(payload.data) ? payload.data.map((item) => item.id).filter(Boolean) : [];
+  } catch {
+    return [];
+  }
 }
 
 function isModelMissing(payload) {
