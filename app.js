@@ -556,6 +556,17 @@ const developmentLog = [
     ],
     notes: ["Priority Work stays sorted by due date."],
   },
+  {
+    date: "2026-05-23",
+    title: "Priority tile density",
+    summary: "Matched Priority Work density to the Active Blockers tile style.",
+    changes: [
+      "Changed Priority Work items into compact clickable tiles.",
+      "Collapsed owner, due date, and customer into short metadata lines.",
+      "Removed the oversized Details button from each item.",
+    ],
+    notes: ["Clicking a priority tile still opens ticket details."],
+  },
 ];
 
 const ticketTypes = [
@@ -1208,25 +1219,18 @@ function priorityWorkCards(tickets) {
   return `
     <div class="priority-work-grid">
       ${tickets.map((ticket) => `
-        <article class="priority-work-card ${priorityWorkTone(ticket)}">
-          <div class="priority-card-main">
-            <div>
-              <div class="priority-card-top">
-                <span class="due-badge">${escapeHtml(dueLabel(ticket.due_date))}</span>
-                <span class="pill">${escapeHtml(labelFor(ticketTypes, ticket.ticket_type))}</span>
-              </div>
-              <h3>${escapeHtml(ticket.title)}</h3>
-              <p>${escapeHtml(ticket.customer_name || "No customer")}</p>
-            </div>
-            <button class="secondary-button compact-button ticket-detail-button" type="button" data-ticket-id="${ticket.id}">Details</button>
+        <button class="priority-work-card ${priorityWorkTone(ticket)} ticket-detail-button" type="button" data-ticket-id="${ticket.id}">
+          <div class="priority-card-top">
+            <span class="due-badge">${escapeHtml(dueLabel(ticket.due_date))}</span>
+            <span class="pill">${escapeHtml(labelFor(ticketTypes, ticket.ticket_type))}</span>
           </div>
+          <strong>${escapeHtml(ticket.title)}</strong>
           <div class="priority-card-meta">
-            <span><strong>Owner</strong>${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")}</span>
-            <span><strong>Due</strong>${escapeHtml(formatDate(ticket.due_date))}</span>
-            ${ticket.blocked_reason ? `<span><strong>Blocked</strong>${escapeHtml(labelFor(blockedReasons, ticket.blocked_reason))}</span>` : ""}
+            <span>${escapeHtml(ticket.customer_name || "No customer")}</span>
+            <small>Owner: ${escapeHtml(ticket.work_owner_name || ticket.owner_name || "Unassigned")} · due ${escapeHtml(formatDate(ticket.due_date))}</small>
+            ${ticket.blocked_reason ? `<small>${escapeHtml(labelFor(blockedReasons, ticket.blocked_reason))}</small>` : ""}
           </div>
-          <div class="tag-row">${ticketPills(ticket)}</div>
-        </article>
+        </button>
       `).join("")}
     </div>
   `;

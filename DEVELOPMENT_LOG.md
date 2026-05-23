@@ -442,3 +442,13 @@ Changed:
 - Changed Priority Work cards into compact rows.
 - Added customer name directly under the ticket title.
 - Kept due, owner, type, and blocker signals visible without wasting vertical space.
+
+### Priority Tile Density
+
+Matched Priority Work density to the Active Blockers tile style.
+
+Changed:
+
+- Changed Priority Work items into compact clickable tiles.
+- Collapsed owner, due date, and customer into short metadata lines.
+- Removed the oversized Details button from each item.
