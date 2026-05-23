@@ -432,3 +432,13 @@ Changed:
 - Added fallback to Claude 3 Haiku if the configured key cannot access Claude 3.5 Haiku.
 - Added Anthropic model discovery so the backend can use a model visible to the configured key.
 - Kept friendly Admin values like haiku working for Azure environment variables.
+
+### Compact Priority Work
+
+Reduced dashboard Priority Work card height and added customer context.
+
+Changed:
+
+- Changed Priority Work cards into compact rows.
+- Added customer name directly under the ticket title.
+- Kept due, owner, type, and blocker signals visible without wasting vertical space.

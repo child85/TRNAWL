@@ -1296,16 +1296,16 @@ th {
 
 .priority-work-grid {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .priority-work-card {
   display: grid;
-  gap: 10px;
+  gap: 7px;
   border: 1px solid var(--line);
-  border-left: 5px solid var(--primary);
+  border-left: 4px solid var(--primary);
   background: #fff;
-  padding: 14px;
+  padding: 10px 12px;
 }
 
 .priority-work-card.overdue {
@@ -1322,6 +1322,7 @@ th {
   border-left-color: #94a3b8;
 }
 
+.priority-card-main,
 .priority-card-top,
 .priority-card-meta {
   display: flex;
@@ -1331,18 +1332,44 @@ th {
   flex-wrap: wrap;
 }
 
+.priority-card-main {
+  align-items: flex-start;
+}
+
+.priority-card-top {
+  justify-content: flex-start;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
 .priority-work-card h3 {
   margin: 0;
   color: var(--navy);
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.3;
+}
+
+.priority-work-card p {
+  margin: 2px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.priority-work-card .tag-row {
+  margin-top: 0;
+}
+
+.priority-work-card .ticket-detail-button {
+  min-width: 82px;
+  justify-content: center;
 }
 
 .priority-card-meta span {
   display: grid;
-  gap: 2px;
-  min-width: 110px;
+  gap: 1px;
+  min-width: 90px;
   color: var(--text);
+  font-size: 13px;
 }
 
 .priority-card-meta strong {
