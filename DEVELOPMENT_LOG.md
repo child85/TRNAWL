@@ -369,3 +369,13 @@ Changed:
 - Sorted Priority Work by due date instead of mixing status-based urgency.
 - Excluded done tickets from the list.
 - Kept blocker status focused in Active Blockers.
+
+### Calendar Horizon And Colors
+
+Expanded calendar planning to four weeks and improved user color contrast.
+
+Changed:
+
+- Changed Calendar from 2 weeks to 4 weeks.
+- Updated demo user colors to a broader readable palette.
+- Kept the overall UI restrained while making calendar ownership easier to scan.

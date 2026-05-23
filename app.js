@@ -452,6 +452,17 @@ const developmentLog = [
     ],
     notes: ["Overdue work still appears first because it has the oldest due dates."],
   },
+  {
+    date: "2026-05-22",
+    title: "Calendar horizon and colors",
+    summary: "Expanded calendar planning to four weeks and improved user color contrast.",
+    changes: [
+      "Changed Calendar from 2 weeks to 4 weeks.",
+      "Updated demo user colors to a broader readable palette.",
+      "Kept the overall UI restrained while making calendar ownership easier to scan.",
+    ],
+    notes: ["User colors remain editable in Admin."],
+  },
 ];
 
 const ticketTypes = [
@@ -2020,7 +2031,7 @@ async function createCustomerAction(event) {
 }
 
 function renderCalendar() {
-  const days = [...Array(14)].map((_, index) => {
+  const days = [...Array(28)].map((_, index) => {
     const date = new Date();
     date.setDate(date.getDate() + index);
     return date;
