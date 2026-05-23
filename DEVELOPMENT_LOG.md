@@ -305,3 +305,14 @@ Changed:
 - Preselected the customer owner from the selected customer's Sales Lead.
 - Updated the customer owner when the selected customer changes.
 - Defaulted new customer actions to three days from today.
+
+### User Email Readiness
+
+Added email addresses to TRNAWL users for the upcoming email notification flow.
+
+Changed:
+
+- Added optional email to user creation.
+- Seeded Thomas with thomasfecke263@gmail.com.
+- Show email status in Admin users.
+- Added helper logic so blank user emails are treated as not sendable.

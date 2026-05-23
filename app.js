@@ -368,6 +368,18 @@ const developmentLog = [
     ],
     notes: ["This keeps customer follow-up creation fast while still editable."],
   },
+  {
+    date: "2026-05-22",
+    title: "User email readiness",
+    summary: "Added email addresses to TRNAWL users for the upcoming email notification flow.",
+    changes: [
+      "Added optional email to user creation.",
+      "Seeded Thomas with thomasfecke263@gmail.com.",
+      "Show email status in Admin users.",
+      "Added helper logic so blank user emails are treated as not sendable.",
+    ],
+    notes: ["Demo users stay blank until real addresses are added."],
+  },
 ];
 
 const ticketTypes = [
@@ -1790,6 +1802,7 @@ async function createPerson(event) {
   const manager = findById(state.people, $("#personManager").value);
   const name = $("#personName").value.trim();
   const role = $("#personRole").value.trim();
+  const email = $("#personEmail").value.trim();
   if (!name || !role) return;
 
   try {
@@ -1801,6 +1814,7 @@ async function createPerson(event) {
         role_label: role,
         manager_id: manager?.id || null,
         manager_name: manager?.display_name || null,
+        email: email || null,
         color: $("#personColor").value || "#0067b1",
         is_current_user: false,
       },
@@ -2587,12 +2601,13 @@ function renderAdmin() {
         </div>
         <div class="table-wrap">
           <table>
-            <thead><tr><th>Name</th><th>Role</th><th>Manager</th><th>Color</th><th>Status</th></tr></thead>
+            <thead><tr><th>Name</th><th>Role</th><th>Email</th><th>Manager</th><th>Color</th><th>Status</th></tr></thead>
             <tbody>
               ${state.people.map((person) => `
                 <tr>
                   <td>${escapeHtml(person.display_name)}</td>
                   <td>${escapeHtml(person.role_label)}</td>
+                  <td>${personCanReceiveEmail(person) ? escapeHtml(person.email) : `<span class="muted">No email</span>`}</td>
                   <td>${escapeHtml(person.manager_name || "None")}</td>
                   <td><span class="color-chip" style="--person-color: ${escapeHtml(person.color || "#0067b1")}"></span></td>
                   <td>${person.is_current_user ? `<span class="pill primary">Default user</span>` : `<span class="pill">Demo user</span>`}</td>
@@ -2618,6 +2633,10 @@ function openPersonDialog() {
   $("#personColor").value = "#0067b1";
   syncObjectSelects();
   $("#personDialog").showModal();
+}
+
+function personCanReceiveEmail(person) {
+  return Boolean(person?.email?.trim());
 }
 
 function labelFor(options, value) {
